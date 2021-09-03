@@ -38,6 +38,7 @@ namespace Chetch.Arduino2
         {
             var message = new ADMMessage();
             message.Type = messageType;
+            message.TargetID = BoardID;
             message.SenderID = BoardID;
 
             return message;

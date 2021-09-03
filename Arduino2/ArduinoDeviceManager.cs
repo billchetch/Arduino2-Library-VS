@@ -255,7 +255,7 @@ namespace Chetch.Arduino2
                     {
                         case MessageType.ERROR:
                             Console.WriteLine("---------------------------");
-                            Console.WriteLine("ERROR: {0}", message.ArgumentAsInt(0));
+                            Console.WriteLine("ADM ERROR: {0}", message.ArgumentAsInt(0));
                             //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
                             Console.WriteLine("---------------------------");
                             break;
@@ -264,14 +264,14 @@ namespace Chetch.Arduino2
                             _initialised = true;
                             Configure();
                             Console.WriteLine("---------------------------");
-                            Console.WriteLine("INIIALISE RESPONSE");
+                            Console.WriteLine("ADM INIIALISE RESPONSE");
                             Console.WriteLine("---------------------------");
                             break;
 
                         case MessageType.CONFIGURE_RESPONSE:
                             _configured = true;
                             Console.WriteLine("---------------------------");
-                            Console.WriteLine("CONFIGURE RESPONSE");
+                            Console.WriteLine("ADM CONFIGURE RESPONSE");
                             Console.WriteLine("---------------------------");
 
                             //now configure all devices
@@ -368,6 +368,7 @@ namespace Chetch.Arduino2
 
         public ArduinoDevice AddDevice(ArduinoDevice device)
         {
+            if (_initialised) throw new Exception("Cannot add device as board already initialised.  All devices must be added PRIOR to calling Initialise");
             if (_devices.ContainsKey(device.ID))
             {
                 throw new Exception(String.Format("Device {0} already added", device.ID));
