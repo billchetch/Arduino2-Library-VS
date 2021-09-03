@@ -376,7 +376,7 @@ namespace Chetch.Arduino2
 
             _devices[device.ID] = device;
             device.ADM = this;
-            device.BoardID = (byte)(_devices.Count + 1);
+            device.BoardID = (byte)_devices.Count;
             return device;
         }
 

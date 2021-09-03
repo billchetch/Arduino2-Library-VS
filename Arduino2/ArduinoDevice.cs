@@ -19,7 +19,7 @@ namespace Chetch.Arduino2
         public String Name { get; internal set; }
         public byte BoardID { get; set; }
 
-        public bool Enabled { get; internal set; }
+        public bool Enabled { get; internal set; } = true;
 
         public int ReportInterval { get; set; }
 
@@ -55,6 +55,7 @@ namespace Chetch.Arduino2
         virtual public ADMMessage Configure()
         {
             var message = CreateMessage(MessageType.CONFIGURE);
+            message.AddArgument(Enabled ? (byte)1 : (byte)0);
             message.AddArgument(ReportInterval);
             return message;
         }
