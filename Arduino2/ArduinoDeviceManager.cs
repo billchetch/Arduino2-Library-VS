@@ -136,7 +136,10 @@ namespace Chetch.Arduino2
             if (IsConnecting) throw new Exception("ADM is in the process of connecting");
             _initialised = false;
             _configured = false;
-            _sfc.Close();
+            if (_sfc.IsOpen)
+            {
+                _sfc.Close();
+            }
         }
 
         public void Reconnect()

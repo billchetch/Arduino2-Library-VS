@@ -19,6 +19,7 @@ namespace Chetch.Arduino2
         public String Name { get; internal set; }
         public byte BoardID { get; set; }
 
+        public DeviceCategory Category { get; protected set; }
         public bool Enabled { get; internal set; } = true;
 
         public int ReportInterval { get; set; }
@@ -49,6 +50,8 @@ namespace Chetch.Arduino2
             _initialised = false;
             _configured = false;
             var message = CreateMessage(MessageType.INITIALISE);
+            message.AddArgument(Name == null ? "N/A" : Name);
+            message.AddArgument((byte)Category);
             return message;
         }
 
@@ -82,7 +85,7 @@ namespace Chetch.Arduino2
     {
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
-
+            Category = DeviceCategory.DIAGNOSTICS;
         }
 
         override public ADMMessage Configure()
