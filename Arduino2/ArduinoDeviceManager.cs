@@ -87,8 +87,6 @@ namespace Chetch.Arduino2
             try
             {
                 _connecting = true;
-                _initialised = false;
-                _configured = false;
                 do
                 {
                     Console.WriteLine("Attempting to open stream...");
@@ -108,34 +106,35 @@ namespace Chetch.Arduino2
                     {
                         Console.WriteLine(e.Message);
                     }
-                    if (!_sfc.IsOpen) Thread.Sleep(500);
+                    if (!_sfc.IsOpen)
+                    {
+                        Thread.Sleep(500);
+                    }
                 } while (!_sfc.IsOpen);
 
                 Console.WriteLine("Stream opened");
 
+                //we now wait for the stream flow controller to synchronise stream reset
                 while (!_sfc.IsReady)
                 {
                     Console.WriteLine("Waiting for remote to reset...");
                     Thread.Sleep(500);
                 }
-                Console.WriteLine("Ready!");
-                _connecting = false;
 
-                Thread.Sleep(200);
+                //by here the stream is open and reset and ready for use
+                Console.WriteLine("Stream is Ready!");
+                _connecting = false;
             }
             catch (Exception e)
             {
                 _connecting = false;
                 throw e;
             }
-            //sfc.Ping();
         }
 
         public void Disconnect()
         {
             if (IsConnecting) throw new Exception("ADM is in the process of connecting");
-            _initialised = false;
-            _configured = false;
             if (_sfc.IsOpen)
             {
                 _sfc.Close();
@@ -144,10 +143,10 @@ namespace Chetch.Arduino2
 
         public void Reconnect()
         {
+            if (!_initialised) throw new Exception("Cannot reconnection if the ADM has never been initialised");
             Disconnect();
             Thread.Sleep(100);
             Connect();
-            Initialise();
         }
 
         void HandleStreamError(Object sender, StreamFlowController.StreamErrorArgs e)
@@ -273,6 +272,8 @@ namespace Chetch.Arduino2
 
                         case MessageType.CONFIGURE_RESPONSE:
                             _configured = true;
+                            if (!IsReady) throw new Exception("Configure reponse received but board not ready!");
+
                             Console.WriteLine("---------------------------");
                             Console.WriteLine("ADM CONFIGURE RESPONSE");
                             Console.WriteLine("---------------------------");
@@ -293,7 +294,7 @@ namespace Chetch.Arduino2
                 {
                     //Stream flow controller
                 }
-                else
+                else if (IsReady)
                 {
                     //devices
                     var dev = GetDevice(message.TargetID);
