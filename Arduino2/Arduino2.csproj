@@ -40,7 +40,8 @@
     <Reference Include="Chetch.RestAPI">
       <HintPath>..\..\RestAPI\RestAPI\bin\Debug\Chetch.RestAPI.dll</HintPath>
     </Reference>
-    <Reference Include="Chetch.Utilities">
+    <Reference Include="Chetch.Utilities, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Utilities\Utilities\bin\Debug\Chetch.Utilities.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -57,6 +58,10 @@
     <Compile Include="ArduinoDeviceManager.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Devices\" />
+    <Folder Include="Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

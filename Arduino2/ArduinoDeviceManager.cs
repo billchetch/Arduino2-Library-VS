@@ -57,6 +57,17 @@ namespace Chetch.Arduino2
 
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
+        public bool IsDeviceReady 
+        { 
+            get
+            {
+                foreach(var d in _devices.Values)
+                {
+                    if (!d.IsReady) return false;
+                }
+                return _devices.Count > 0;
+            } 
+        }
 
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
@@ -262,6 +273,14 @@ namespace Chetch.Arduino2
                             Console.WriteLine("---------------------------");
                             Console.WriteLine("CONFIGURE RESPONSE");
                             Console.WriteLine("---------------------------");
+
+                            //now configure all devices
+                            foreach(var dev in _devices.Values)
+                            {
+                                Console.WriteLine("Initialising {0}", dev.ID);
+                                ADMMessage m = dev.Initialise();
+                                SendMessage(m);
+                            }
                             break;
                     }
 
@@ -274,6 +293,16 @@ namespace Chetch.Arduino2
                 else
                 {
                     //devices
+                    var dev = GetDevice(message.TargetID);
+                    if(dev == null)
+                    {
+                        throw new Exception(String.Format("Device {0} not found", message.TargetID));
+                    }
+                    ADMMessage response = dev.HandleMessage(message);
+                    if(response != null)
+                    {
+                        SendMessage(response);
+                    }
                 }
 
                 if (IsReady && MessageReceived != null)
@@ -353,6 +382,16 @@ namespace Chetch.Arduino2
         public ArduinoDevice GetDevice(String id)
         {
             return _devices.ContainsKey(id) ? _devices[id] : null;
+        }
+
+        public ArduinoDevice GetDevice(byte boardID)
+        {
+            foreach(var d in _devices.Values)
+            {
+                if (d.BoardID == boardID) return d;
+            }
+
+            return null;
         }
 
         public byte RequestStatus()
