@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Chetch.Messaging;
 using Chetch.Arduino;
 
-namespace Arduino2
+namespace Chetch.Arduino2
 {
     abstract public class ArduinoDevice
     {

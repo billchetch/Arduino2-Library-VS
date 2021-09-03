@@ -7,7 +7,7 @@ using Chetch.RestAPI.Network;
 using System.Net;
 using Chetch.Utilities.Streams;
 
-namespace Arduino2
+namespace Chetch.Arduino2
 {
     public class ArduinoTCPConnection : TCPClientStream
     {

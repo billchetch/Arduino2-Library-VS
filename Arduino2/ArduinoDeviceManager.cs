@@ -10,7 +10,7 @@ using Chetch.Messaging;
 using Chetch.Arduino;
 
 
-namespace Arduino2
+namespace Chetch.Arduino2
 {
     public class ArduinoDeviceManager
     {
@@ -239,6 +239,7 @@ namespace Arduino2
                 ADMMessage message = ADMMessage.Deserialize<ADMMessage>(s, MessageEncoding.BYTES_ARRAY);
                 if (message.TargetID == ADM_TARGET_ID)
                 {
+                    //Board
                     switch (message.Type)
                     {
                         case MessageType.ERROR:
@@ -255,6 +256,7 @@ namespace Arduino2
                             Console.WriteLine("INIIALISE RESPONSE");
                             Console.WriteLine("---------------------------");
                             break;
+
                         case MessageType.CONFIGURE_RESPONSE:
                             _configured = true;
                             Console.WriteLine("---------------------------");
@@ -267,7 +269,7 @@ namespace Arduino2
                 }
                 else if (message.TargetID == ADM_STREAM_TARGET_ID)
                 {
-
+                    //Stream flow controller
                 }
                 else
                 {
