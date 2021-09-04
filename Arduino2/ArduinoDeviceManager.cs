@@ -18,6 +18,14 @@ namespace Chetch.Arduino2
         public const byte ADM_STREAM_TARGET_ID = 255;
         public const int ADM_MESSAGE_SIZE = 50; //in bytes
 
+        public enum MessageField
+        {
+            MILLIS = 0,
+            MEMORY,
+            DEVICE_COUNT,
+            IS_READY,
+        }
+
         public class MessageReceivedArgs : EventArgs
         {
             public ADMMessage Message { get; internal set; }
@@ -242,14 +250,16 @@ namespace Chetch.Arduino2
 
         void HandleStreamData(Object sender, EventArgs e)
         {
+            ADMMessage message = null;
             Frame f = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM);
             f.Add(_sfc.ReceiveBuffer);
+
             try
             {
                 f.Validate();
                 //TODO: pointless bytes to string to message conversion ...!!!
                 String s = Chetch.Utilities.Convert.ToString(f.Payload);
-                ADMMessage message = ADMMessage.Deserialize<ADMMessage>(s, MessageEncoding.BYTES_ARRAY);
+                message = ADMMessage.Deserialize<ADMMessage>(s, MessageEncoding.BYTES_ARRAY);
                 if (message.TargetID == ADM_TARGET_ID)
                 {
                     //Board
@@ -286,6 +296,23 @@ namespace Chetch.Arduino2
                                 SendMessage(m);
                             }
                             break;
+
+                        case MessageType.STATUS_RESPONSE:
+                            if (IsDeviceReady)
+                            {
+                                int n = message.ArgumentAsInt(GetArgumentIndex(message, MessageField.DEVICE_COUNT));
+                                if(n != _devices.Count)
+                                {
+                                    throw new Exception(String.Format("Number of devices local is {0} but remote is {1}", _devices.Count, n));
+                                }
+
+                                foreach(var dev in _devices.Values)
+                                {
+                                    ADMMessage m = dev.CreateMessage(MessageType.STATUS_REQUEST);
+                                    SendMessage(m);
+                                }
+                            }
+                            break;
                     }
 
 
@@ -309,18 +336,20 @@ namespace Chetch.Arduino2
                     }
                 }
 
-                if (IsReady && MessageReceived != null)
-                {
-                    var args = new MessageReceivedArgs(message);
-                    MessageReceived(this, args);
-                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Fuck it errored: {0}", ex.Message);
+
+                //TODO: create error message
                 //log.Add(String.Format("Fuck it errored: {0}", ex.Message));
             }
 
+            if (message != null && IsReady && MessageReceived != null)
+            {
+                var args = new MessageReceivedArgs(message);
+                MessageReceived(this, args);
+            }
             //Console.WriteLine("---- Message {0} received of length {1} bytes: {2} --------------------------", messageReceivedCount, serial.ReceiveBuffer.Count, s);
         }
 
@@ -354,6 +383,16 @@ namespace Chetch.Arduino2
             messageFrame.Payload = bts2send.ToArray();
             _sfc.Send(messageFrame.GetBytes());
         }
+
+        public int GetArgumentIndex(ADMMessage message, MessageField field)
+        {
+            switch (field)
+            {
+                default:
+                    return (int)field;
+            }
+        }
+
         public void Initialise(bool allowNoDevices = false)
         {
             if (!allowNoDevices && _devices.Count == 0) throw new Exception("No devices have been added to the ADM");
@@ -403,7 +442,6 @@ namespace Chetch.Arduino2
         {
             if (!IsReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST);
-            message.AddArgument(3);
             SendMessage(message);
             return message.Tag;
         }

@@ -12,6 +12,14 @@ namespace Chetch.Arduino2
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
+        public enum MessageField
+        {
+            ENABLED = 0,
+            REPORT_INTERVAL,
+            DEVICE_NAME,
+            CATEGORY
+        }
+
         public ArduinoDeviceManager ADM { get; set; }
 
         
@@ -45,6 +53,15 @@ namespace Chetch.Arduino2
             return message;
         }
 
+        public int GetArgumentIndex(ADMMessage message, MessageField field)
+        {
+            switch (field)
+            {
+                default:
+                    return (int)field;
+            }
+        }
+
         virtual public ADMMessage Initialise()
         {
             _initialised = false;
@@ -75,7 +92,8 @@ namespace Chetch.Arduino2
                     _configured = true;
                     break;
 
-
+                case MessageType.STATUS_RESPONSE:
+                    break;
             }
             return null;
         }
@@ -83,14 +101,30 @@ namespace Chetch.Arduino2
 
     public class TestDevice01 : ArduinoDevice
     {
+
+        new public enum MessageField
+        {
+            TEST_VALUE = 0
+        }
+
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
         }
 
+        public int GetArgumentIndex(ADMMessage message, MessageField field)
+        {
+            switch (field)
+            {
+                default:
+                    return (int)field;
+            }
+        }
+
         override public ADMMessage Configure()
         {
             var message = base.Configure();
+
             return message;
         }
     }
