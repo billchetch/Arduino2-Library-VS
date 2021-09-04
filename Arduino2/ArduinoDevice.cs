@@ -110,6 +110,7 @@ namespace Chetch.Arduino2
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
+            Enabled = false;
         }
 
         public int GetArgumentIndex(ADMMessage message, MessageField field)
