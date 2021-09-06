@@ -12,6 +12,17 @@ namespace Chetch.Arduino2
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
+        public enum DeviceState
+        {
+            CREATED = 1,
+            INITIALISING,
+            INITIALISED,
+            CONFIGURING,
+            CONFIGURED,
+        }
+
+        public DeviceState State { get; internal set; } = DeviceState.CREATED;
+
         public enum MessageField
         {
             ENABLED = 0,
@@ -32,10 +43,8 @@ namespace Chetch.Arduino2
 
         public int ReportInterval { get; set; }
 
-        private bool _initialised = false;
-        private bool _configured = false;
-
-        public bool IsReady => _initialised && _configured;
+        
+        public bool IsReady => State == DeviceState.CONFIGURED;
 
         public ArduinoDevice(String id, String name)
         {
@@ -64,8 +73,7 @@ namespace Chetch.Arduino2
 
         virtual public ADMMessage Initialise()
         {
-            _initialised = false;
-            _configured = false;
+            State = DeviceState.INITIALISING;
             var message = CreateMessage(MessageType.INITIALISE);
             message.AddArgument(Name == null ? "N/A" : Name);
             message.AddArgument((byte)Category);
@@ -74,6 +82,7 @@ namespace Chetch.Arduino2
 
         virtual public ADMMessage Configure()
         {
+            State = DeviceState.CONFIGURING;
             var message = CreateMessage(MessageType.CONFIGURE);
             message.AddArgument(Enabled ? (byte)1 : (byte)0);
             message.AddArgument(ReportInterval);
@@ -85,11 +94,11 @@ namespace Chetch.Arduino2
             switch (message.Type)
             {
                 case MessageType.INITIALISE_RESPONSE:
-                    _initialised = true;
+                    State = DeviceState.INITIALISED;
                     return Configure();
 
                 case MessageType.CONFIGURE_RESPONSE:
-                    _configured = true;
+                    State = DeviceState.CONFIGURED;
                     break;
 
                 case MessageType.STATUS_RESPONSE:

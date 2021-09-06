@@ -17,6 +17,34 @@ namespace Chetch.Arduino2
         public const byte ADM_TARGET_ID = 0;
         public const byte ADM_STREAM_TARGET_ID = 255;
         public const int ADM_MESSAGE_SIZE = 50; //in bytes
+        public const int DEFAULT_CONNECT_TIMEOUT = 5000;
+
+        public enum ErrorCode
+        {
+            NO_ERROR = 0,
+            NO_ADM_INSTANCE = 1,
+            MESSAGE_FRAME_ERROR = 10,
+            ADM_MESSAGE_ERROR = 11,
+            ADM_MESSAGE_IS_EMPTY= 12,
+            NO_DEVICE_ID = 20,
+            DEVICE_LIMIT_REACHED = 21,
+            DEVICE_ID_ALREADY_USED = 22,
+            DEVICE_NOT_FOUND = 23,
+            DEVICE_CANNOT_BE_CREATED = 24,
+        }
+
+        public enum ADMState
+        {
+            CREATED = 1,
+            INITIALISING,
+            INITIALISED,
+            CONFIGURING,
+            CONFIGURED,
+            DEVICE_INITIALISING,
+            DEVICE_INITIALISED,
+            DEVICE_CONFIGURING,
+            DEVICE_CONFIGURED,
+        }
 
         public enum MessageField
         {
@@ -36,50 +64,96 @@ namespace Chetch.Arduino2
             }
         }
 
-        public static ArduinoDeviceManager Connect(String portName, int baudRate, int localUartSize, int remoteUartSize)
+        public static ArduinoDeviceManager Create(String portName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
             var ports = SerialPorts.Find(portName);
             var serial = new SerialPortX(ports[0], baudRate);
             var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
-            var adm = new ArduinoDeviceManager(sfc);
-            adm.Connect();
+            var adm = new ArduinoDeviceManager(sfc, connectTimeout);
             return adm;
         }
-        public static ArduinoDeviceManager Connect(String serviceName, String networkServiceURL, int localUartSize, int remoteUartSize)
+        public static ArduinoDeviceManager Create(String serviceName, String networkServiceURL, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
             var cnn = new ArduinoTCPConnection(serviceName, networkServiceURL);
             var sfc = new StreamFlowController(cnn, localUartSize, remoteUartSize);
-            var adm = new ArduinoDeviceManager(sfc);
-            adm.Connect();
+            var adm = new ArduinoDeviceManager(sfc, connectTimeout);
             return adm;
         }
 
         private StreamFlowController _sfc;
+        private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+
+        private bool _connected = false;
         private bool _connecting = false;
+        public bool Connecting
+        {
+            get{ return _connecting; }
+            internal set
+            {
+                _connecting = value;
+                if (_connecting) _connected = false;
+            }
+        }
+        public bool Connected
+        {
+            get{ return _connected; }
+            internal set
+            {
+                _connected = value;
+                if (_connected) _connecting = false;
+            }
+        }
 
-        public bool IsReady => _sfc.IsReady && !IsConnecting && _initialised && _configured;
-        public bool IsConnecting => _connecting;
+        private bool _synchronising = false;
+        private bool _synchronised = false;
+        public bool Synchronising
+        {
+            get { return _synchronising; }
+            internal set
+            {
+                _synchronising = value;
+                if (_synchronising) _synchronised = false;
+            }
+        }
+        public bool Synchronised
+        {
+            get { return _synchronised; }
+            internal set
+            {
+                _synchronised = value;
+                if (_synchronised) _synchronising = false;
+            }
+        }
 
-        public bool _initialised = false;
-        public bool _configured = false;
+        private ADMState _state = ADMState.CREATED;
+        public ADMState State
+        {
+            get
+            {
+                return _state;
+            }
+            internal set
+            {
+                //TODO: add an event handler here for external code to monitor ADM state changes
+                Console.WriteLine("ADM State = {0}", value);
+                _state = value;
+            }
+        }
 
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
-        public bool IsDeviceReady 
-        { 
-            get
-            {
-                foreach(var d in _devices.Values)
-                {
-                    if (!d.IsReady) return false;
-                }
-                return _devices.Count > 0;
-            } 
-        }
+        public bool IsBoardReady => Connected && ((int)State >= (int)ADMState.CONFIGURED);
+        public bool IsDeviceReady => Connected && (State == ADMState.DEVICE_CONFIGURED);
 
+        public bool IsReady => IsEmpty ? IsBoardReady : IsDeviceReady;
+
+        public bool IsEmpty => _devices.Count == 0;
+        
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
-        public ArduinoDeviceManager(StreamFlowController sfc)
+        private System.Timers.Timer _synchroniseTimer;
+
+        public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
             _sfc = sfc;
             _sfc.CTSTimeout = 1000; //in ms
@@ -87,17 +161,35 @@ namespace Chetch.Arduino2
             _sfc.DataBlockReceived += HandleStreamData;
             _sfc.EventByteReceived += HandleStreamEventByteReceived;
             _sfc.EventByteSent += HandleStreamEventByteSent;
+            _connectTimeout = connectTimeout;
         }
 
-        public void Connect()
+        private void wait(int sleep, DateTime started = default(DateTime), int timeout = -1, String timeoutMessage = "Timed out!")
         {
-            if (IsConnecting) throw new Exception("ADM is in the process of connecting");
+            if (timeout > 0)
+            {
+                if (Measurement.HasTimedOut(started, timeout))
+                {
+                    throw new TimeoutException(timeoutMessage);
+                }
+            }
+            Thread.Sleep(sleep);
+        }
+
+        public void Connect(int timeout = -1)
+        {
+            if (Connecting) throw new InvalidOperationException("ADM is in the process of connecting");
+            if (Connected) throw new InvalidOperationException("ADM is already connected");
+            if (_sfc.IsOpen) throw new InvalidOperationException("Underlying stream is open");
             try
             {
-                _connecting = true;
+                Connecting = true;
+                if (timeout <= 0) timeout = _connectTimeout;
+                DateTime started = DateTime.Now;
                 do
                 {
-                    Console.WriteLine("Attempting to open stream...");
+                    
+                    //Some connections e.g. TCPClient need to be made new if connecting to same end point
                     if (_sfc.Stream is ArduinoTCPConnection)
                     {
                         var cnn = (ArduinoTCPConnection)_sfc.Stream;
@@ -106,6 +198,8 @@ namespace Chetch.Arduino2
                             _sfc.Stream = new ArduinoTCPConnection(cnn.RemoteEndPoint);
                         }
                     }
+
+                    Console.WriteLine("Attempting to open stream...");
                     try
                     {
                         _sfc.Open();
@@ -116,8 +210,9 @@ namespace Chetch.Arduino2
                     }
                     if (!_sfc.IsOpen)
                     {
-                        Thread.Sleep(500);
+                        wait(500, started, timeout, "Connecting timed out waiting for stream to open");
                     }
+                    
                 } while (!_sfc.IsOpen);
 
                 Console.WriteLine("Stream opened");
@@ -126,35 +221,42 @@ namespace Chetch.Arduino2
                 while (!_sfc.IsReady)
                 {
                     Console.WriteLine("Waiting for remote to reset...");
-                    Thread.Sleep(500);
+                    wait(500, started, timeout, "Connecting timed out waiting for stream to become ready");
                 }
 
                 //by here the stream is open and reset and ready for use
                 Console.WriteLine("Stream is Ready!");
-                _connecting = false;
+                Connected = true;
             }
             catch (Exception e)
             {
-                _connecting = false;
+                Connected = false;
+                Connecting = false;
                 throw e;
             }
         }
 
         public void Disconnect()
         {
-            if (IsConnecting) throw new Exception("ADM is in the process of connecting");
+            if (Connecting) throw new Exception("ADM is in the process of connecting");
             if (_sfc.IsOpen)
             {
                 _sfc.Close();
             }
+            Connected = false;
         }
 
         public void Reconnect()
         {
-            if (!_initialised) throw new Exception("Cannot reconnection if the ADM has never been initialised");
+            Console.WriteLine("Reconnecting...");
             Disconnect();
-            Thread.Sleep(100);
-            Connect();
+            wait(100);
+            Connect(_connectTimeout);
+            wait(100);
+            if (!IsReady || !Synchronise())
+            {
+                Initialise(); //this will start init config process
+            }
         }
 
         void HandleStreamError(Object sender, StreamFlowController.StreamErrorArgs e)
@@ -172,9 +274,12 @@ namespace Chetch.Arduino2
             }
 
             Console.WriteLine("ERROR: Stream error: {0} {1}", e.Error, e.Exception == null ? "N / A" : e.Exception.Message);
-            if (!sfc.IsOpen && !IsConnecting)
+            if (!sfc.IsOpen && !Connecting) 
             {
-                Reconnect();
+                Task.Run(() =>
+                {
+                    Reconnect();
+                });
             }
         }
 
@@ -187,7 +292,7 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine("REMOTE ESP EVENT: Reset");
+                    Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
@@ -219,7 +324,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case 200 + (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine("REMOTE ARDUINO EVENT: Reset");
+                    Console.WriteLine("<<<<< REMOTE ARDUINO EVENT: Reset");
                     break;
 
                 case 200 + (byte)StreamFlowController.Event.SEND_BUFFER_OVERFLOW_ALERT:
@@ -239,6 +344,10 @@ namespace Chetch.Arduino2
             byte b = e.EventByte;
             switch (b)
             {
+                case (byte)StreamFlowController.Event.RESET:
+                    Console.WriteLine(">>>> LOCAL EVENT: {0} ... sending RESET to remote", b);
+                    break;
+
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     Console.WriteLine("LOCAL EVENT: {0} ... CTS Timeout event sent to remote", b);
                     Console.WriteLine("Bytes received/sent {0}/{1}", _sfc.BytesReceived, _sfc.BytesSent);
@@ -248,11 +357,11 @@ namespace Chetch.Arduino2
             //log.Add(String.Format(" event byte: {0}", b));
         }
 
-        void HandleStreamData(Object sender, EventArgs e)
+        void HandleStreamData(Object sender, StreamFlowController.DataBlockArgs e)
         {
             ADMMessage message = null;
             Frame f = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM);
-            f.Add(_sfc.ReceiveBuffer);
+            f.Add(e.DataBlock);
 
             try
             {
@@ -273,7 +382,7 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.INITIALISE_RESPONSE:
-                            _initialised = true;
+                            State = ADMState.INITIALISED;
                             Configure();
                             Console.WriteLine("---------------------------");
                             Console.WriteLine("ADM INIIALISE RESPONSE");
@@ -281,19 +390,22 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.CONFIGURE_RESPONSE:
-                            _configured = true;
-                            if (!IsReady) throw new Exception("Configure reponse received but board not ready!");
-
+                            State = ADMState.CONFIGURED;
                             Console.WriteLine("---------------------------");
                             Console.WriteLine("ADM CONFIGURE RESPONSE");
                             Console.WriteLine("---------------------------");
 
-                            //now configure all devices
-                            foreach(var dev in _devices.Values)
+                            //now configure all device
+                            if (!IsEmpty)
                             {
-                                Console.WriteLine("Initialising {0}", dev.ID);
-                                ADMMessage m = dev.Initialise();
-                                SendMessage(m);
+                                State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
+                                foreach (var dev in _devices.Values)
+                                {
+                                    Console.WriteLine("Initialising {0}", dev.ID);
+                                    ADMMessage m = dev.Initialise();
+                                    SendMessage(m);
+                                    //Thread.Sleep(500);
+                                }
                             }
                             break;
 
@@ -303,54 +415,86 @@ namespace Chetch.Arduino2
                                 int n = message.ArgumentAsInt(GetArgumentIndex(message, MessageField.DEVICE_COUNT));
                                 if(n != _devices.Count)
                                 {
-                                    throw new Exception(String.Format("Number of devices local is {0} but remote is {1}", _devices.Count, n));
+                                    if (Synchronising)
+                                    {
+                                        Synchronising = false;
+                                        Synchronised = false;
+                                    }
+                                    throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
                                 }
-
-                                foreach(var dev in _devices.Values)
+                                else
                                 {
-                                    ADMMessage m = dev.CreateMessage(MessageType.STATUS_REQUEST);
-                                    SendMessage(m);
+                                    if (Synchronising)
+                                    {
+                                        Synchronised = true;
+                                    }
                                 }
                             }
                             break;
                     }
-
-
                 }
                 else if (message.TargetID == ADM_STREAM_TARGET_ID)
                 {
                     //Stream flow controller
                 }
-                else if (IsReady)
+                else if (IsBoardReady)
                 {
                     //devices
-                    var dev = GetDevice(message.TargetID);
+                    ArduinoDevice dev = GetDevice(message.TargetID);
                     if(dev == null)
                     {
                         throw new Exception(String.Format("Device {0} not found", message.TargetID));
                     }
                     ADMMessage response = dev.HandleMessage(message);
+
+                    //we work out where we are in terms of device state ... if all are of the same state then this updates
+                    //the board state
+                    switch (message.Type)
+                    {
+                        case MessageType.INITIALISE_RESPONSE:
+                        case MessageType.CONFIGURE_RESPONSE:
+                            ArduinoDevice.DeviceState devState = dev.State;
+                            bool allOfSameState = true;
+                            foreach (var d in _devices.Values)
+                            {
+                                if (d.State != devState) allOfSameState = false;
+                            }
+                            if (allOfSameState)
+                            {
+                                switch (devState)
+                                {
+                                    case ArduinoDevice.DeviceState.INITIALISED:
+                                        State = ADMState.DEVICE_INITIALISED;
+                                        break;
+
+                                    case ArduinoDevice.DeviceState.CONFIGURING:
+                                        State = ADMState.DEVICE_CONFIGURING;
+                                        break;
+
+                                    case ArduinoDevice.DeviceState.CONFIGURED:
+                                        State = ADMState.DEVICE_CONFIGURED;
+                                        break;
+                                }
+                            }
+                            break;
+                    }
+                    
                     if(response != null)
                     {
                         SendMessage(response);
                     }
-                }
-
+                } //end target switch
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Fuck it errored: {0}", ex.Message);
-
-                //TODO: create error message
-                //log.Add(String.Format("Fuck it errored: {0}", ex.Message));
+                Console.WriteLine("HandleSreamData excepion: {0}", ex.Message);
             }
 
-            if (message != null && IsReady && MessageReceived != null)
+            if (message != null && IsBoardReady && MessageReceived != null)
             {
                 var args = new MessageReceivedArgs(message);
                 MessageReceived(this, args);
             }
-            //Console.WriteLine("---- Message {0} received of length {1} bytes: {2} --------------------------", messageReceivedCount, serial.ReceiveBuffer.Count, s);
         }
 
         public void PingStream()
@@ -370,7 +514,7 @@ namespace Chetch.Arduino2
 
         public void SendMessage(ADMMessage message)
         {
-            if (!_sfc.IsReady && !IsConnecting) throw new Exception("ADM is not able to send messages");
+            if (!_sfc.IsReady && !Connecting) throw new Exception("ADM is not able to send messages");
 
             Frame messageFrame = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM, MessageEncoding.BYTES_ARRAY);
             List<byte> bts2send = new List<byte>();
@@ -393,25 +537,28 @@ namespace Chetch.Arduino2
             }
         }
 
-        public void Initialise(bool allowNoDevices = false)
+        public void Initialise(bool allowEmpty = false)
         {
-            if (!allowNoDevices && _devices.Count == 0) throw new Exception("No devices have been added to the ADM");
+            if (!allowEmpty && IsEmpty) throw new Exception("No devices have been added to the ADM");
 
-            _initialised = false;
+            State = ADMState.INITIALISING;
             var message = CreateMessage(MessageType.INITIALISE);
             SendMessage(message);
         }
 
         public void Configure()
         {
-            _configured = false;
+            State = ADMState.CONFIGURING;
             var message = CreateMessage(MessageType.CONFIGURE);
             SendMessage(message);
         }
 
         public ArduinoDevice AddDevice(ArduinoDevice device)
         {
-            if (_initialised) throw new Exception("Cannot add device as board already initialised.  All devices must be added PRIOR to calling Initialise");
+            if (State >= ADMState.INITIALISING)
+            {
+                throw new Exception(String.Format("Board is in state {0} but devices can only be added once connected and prior to initialising", State));
+            }
             if (_devices.ContainsKey(device.ID))
             {
                 throw new Exception(String.Format("Device {0} already added", device.ID));
@@ -438,12 +585,73 @@ namespace Chetch.Arduino2
             return null;
         }
 
+        public void Begin(int timeout, bool allowNoDevices = false)
+        {
+            //will close the stream if it's open and set Connected to false
+            Disconnect();
+
+            DateTime started = DateTime.Now;
+            Connect(timeout);
+            
+            Initialise(allowNoDevices);
+            
+            while (!IsReady)
+            {
+                wait(100, started, timeout, String.Format("Timed out Waiting for {0} readiness", _devices.Count > 0 ? "Device" : "ADM"));
+            }
+
+            long remaining = (DateTime.Now.Ticks - started.Ticks) / TimeSpan.TicksPerMillisecond;
+            if (!Synchronise((int)remaining))
+            {
+                throw new Exception("Failed to synchronise");
+            }
+
+            if(_synchroniseTimer == null)
+            {
+                _synchroniseTimer = new System.Timers.Timer(1000);
+                _synchroniseTimer.Elapsed += OnSynchroniseTimer;
+                _synchroniseTimer.AutoReset = true;
+                _synchroniseTimer.Start();
+            }
+        }
+
+        protected void OnSynchroniseTimer(Object sender, EventArgs e)
+        {
+            if (IsReady)
+            {
+                _synchroniseTimer.Stop();
+            }
+        }
+
         public byte RequestStatus()
         {
-            if (!IsReady) throw new Exception("ADM is not ready");
+            if (!IsBoardReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST);
             SendMessage(message);
             return message.Tag;
+        }
+
+        public bool Synchronise(int timeout = 2000)
+        {
+            if (!IsReady) throw new Exception("Cannot synchronise as ADM is not ready");
+            if (Synchronising) throw new Exception("ADM is in the process of synchronising");
+
+            Console.WriteLine("Stared synchronising...");
+            Synchronising = true;
+            RequestStatus();
+            DateTime started = DateTime.Now;
+            try
+            {
+                while (Synchronising)
+                {
+                    wait(100, started, timeout, "Timed out while synchronising");
+                }
+            } catch (TimeoutException)
+            {
+                Synchronised = false;
+            }
+            Synchronising = false;
+            return Synchronised;
         }
     }
 }
