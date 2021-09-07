@@ -18,6 +18,8 @@ namespace Chetch.Arduino2
         public const byte ADM_STREAM_TARGET_ID = 255;
         public const int ADM_MESSAGE_SIZE = 50; //in bytes
         public const int DEFAULT_CONNECT_TIMEOUT = 5000;
+        public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
+        public const int DEFAULT_INACTIVITY_TTIMEOUT = 5000;
 
         public enum ErrorCode
         {
@@ -152,6 +154,8 @@ namespace Chetch.Arduino2
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         private System.Timers.Timer _synchroniseTimer;
+
+        public DateTime LastMessageReceived { get; internal set; }
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -369,6 +373,7 @@ namespace Chetch.Arduino2
                 //TODO: pointless bytes to string to message conversion ...!!!
                 String s = Chetch.Utilities.Convert.ToString(f.Payload);
                 message = ADMMessage.Deserialize<ADMMessage>(s, MessageEncoding.BYTES_ARRAY);
+                LastMessageReceived = DateTime.Now;
                 if (message.TargetID == ADM_TARGET_ID)
                 {
                     //Board
@@ -608,18 +613,22 @@ namespace Chetch.Arduino2
 
             if(_synchroniseTimer == null)
             {
-                _synchroniseTimer = new System.Timers.Timer(1000);
+                _synchroniseTimer = new System.Timers.Timer(DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
                 _synchroniseTimer.Elapsed += OnSynchroniseTimer;
-                _synchroniseTimer.AutoReset = true;
-                _synchroniseTimer.Start();
             }
+            _synchroniseTimer.Start();
         }
 
         protected void OnSynchroniseTimer(Object sender, EventArgs e)
         {
-            if (IsReady)
+            if (IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
                 _synchroniseTimer.Stop();
+                if (!Synchronise() && !Connecting)
+                {
+                    Reconnect();
+                }
+                _synchroniseTimer.Start();
             }
         }
 
@@ -634,9 +643,8 @@ namespace Chetch.Arduino2
         public bool Synchronise(int timeout = 2000)
         {
             if (!IsReady) throw new Exception("Cannot synchronise as ADM is not ready");
-            if (Synchronising) throw new Exception("ADM is in the process of synchronising");
-
-            Console.WriteLine("Stared synchronising...");
+            
+            Console.WriteLine("Started synchronising...");
             Synchronising = true;
             RequestStatus();
             DateTime started = DateTime.Now;
