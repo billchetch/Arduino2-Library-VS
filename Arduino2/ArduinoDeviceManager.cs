@@ -400,15 +400,14 @@ namespace Chetch.Arduino2
                             Console.WriteLine("ADM CONFIGURE RESPONSE");
                             Console.WriteLine("---------------------------");
 
-                            //now configure all device
+                            //now initialise all devices
                             if (!IsEmpty)
                             {
                                 State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
                                 foreach (var dev in _devices.Values)
                                 {
                                     Console.WriteLine("Initialising {0}", dev.ID);
-                                    ADMMessage m = dev.Initialise();
-                                    SendMessage(m);
+                                    dev.Initialise();
                                     //Thread.Sleep(500);
                                 }
                             }
@@ -450,7 +449,7 @@ namespace Chetch.Arduino2
                     {
                         throw new Exception(String.Format("Device {0} not found", message.TargetID));
                     }
-                    ADMMessage response = dev.HandleMessage(message);
+                    dev.HandleMessage(message);
 
                     //we work out where we are in terms of device state ... if all are of the same state then this updates
                     //the board state
@@ -482,11 +481,6 @@ namespace Chetch.Arduino2
                                 }
                             }
                             break;
-                    }
-                    
-                    if(response != null)
-                    {
-                        SendMessage(response);
                     }
                 } //end target switch
             }
@@ -661,5 +655,6 @@ namespace Chetch.Arduino2
             Synchronising = false;
             return Synchronised;
         }
+
     }
 }

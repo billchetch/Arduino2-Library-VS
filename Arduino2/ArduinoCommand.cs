@@ -13,6 +13,13 @@ namespace Chetch.Arduino2
             return new ArduinoCommand(delay);
         }
 
+        static ArduinoCommand Enable(bool enable)
+        {
+            var cmd = new ArduinoCommand(DeviceCommand.ENABLE);
+            cmd.AddParameter(enable);
+            return cmd;
+        }
+
         public enum DeviceCommand
         {
             NONE = 0,
@@ -29,22 +36,23 @@ namespace Chetch.Arduino2
 
         public String Alias { get; internal set; }
 
-        public List<UInt32> Parameters { get; internal set; } = new List<UInt32>();
+        public List<ValueType> Parameters { get; internal set; } = new List<ValueType>();
 
-        private int _delay = 0;
+        public int DelayInterval { get; internal set; } = 0;
 
         List<ArduinoCommand> Commands = new List<ArduinoCommand>();
 
         public bool IsCompound => Commands != null && Commands.Count > 0;
 
-        ArduinoCommand(DeviceCommand command, String alias = null)
+        public bool IsDelay => Command == DeviceCommand.NONE && DelayInterval > 0;
+
+        public ArduinoCommand(DeviceCommand command, String alias = null)
         {
             Command = command;
             Alias = alias;
         }
 
-
-        ArduinoCommand(DeviceCommand command, UInt32 parameter, String alias = null)
+        public ArduinoCommand(DeviceCommand command, ValueType parameter, String alias = null)
         {
             Command = command;
             Alias = alias;
@@ -52,15 +60,15 @@ namespace Chetch.Arduino2
         }
         ArduinoCommand(int delay) : this(DeviceCommand.NONE)
         {
-            _delay = delay;
+            DelayInterval = delay;
         }
 
-        public void AddParameter(UInt32 parameter)
+        public void AddParameter(ValueType parameter)
         {
             Parameters.Add(parameter);
         }
 
-        public void AddParameters(params UInt32[] parameters)
+        public void AddParameters(params ValueType[] parameters)
         {
             foreach(var p in parameters)
             {
