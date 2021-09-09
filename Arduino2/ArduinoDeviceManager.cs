@@ -142,6 +142,8 @@ namespace Chetch.Arduino2
             }
         }
 
+        protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
         public bool IsBoardReady => Connected && ((int)State >= (int)ADMState.CONFIGURED);
@@ -365,10 +367,10 @@ namespace Chetch.Arduino2
         {
             ADMMessage message = null;
             Frame f = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM);
-            f.Add(e.DataBlock);
-
+            
             try
             {
+                f.Add(e.DataBlock);
                 f.Validate();
                 //TODO: pointless bytes to string to message conversion ...!!!
                 String s = Chetch.Utilities.Convert.ToString(f.Payload);
@@ -486,7 +488,7 @@ namespace Chetch.Arduino2
             }
             catch (Exception ex)
             {
-                Console.WriteLine("HandleSreamData excepion: {0}", ex.Message);
+                Console.WriteLine("HandleStreamData excepion: {0}", ex.Message);
             }
 
             if (message != null && IsBoardReady && MessageReceived != null)
@@ -501,11 +503,14 @@ namespace Chetch.Arduino2
             _sfc.Ping();
         }
 
-        public ADMMessage CreateMessage(MessageType type, byte tag = 0, byte sender = ADM_TARGET_ID)
+        public ADMMessage CreateMessage(MessageType type, bool tag = false, byte sender = ADM_TARGET_ID)
         {
             ADMMessage message = new ADMMessage();
             message.Type = type;
-            message.Tag = tag;
+            if (tag)
+            {
+                message.Tag = MessageTags.CreateTag();
+            }
             message.TargetID = ADM_TARGET_ID;
             message.SenderID = ADM_TARGET_ID;
             return message;
@@ -598,8 +603,11 @@ namespace Chetch.Arduino2
             {
                 wait(100, started, timeout, String.Format("Timed out Waiting for {0} readiness", _devices.Count > 0 ? "Device" : "ADM"));
             }
-
             long remaining = (DateTime.Now.Ticks - started.Ticks) / TimeSpan.TicksPerMillisecond;
+            if(remaining <= 0)
+            {
+                throw new TimeoutException(String.Format("Timed out Waiting for {0} readiness", _devices.Count > 0 ? "Device" : "ADM"));
+            }
             if (!Synchronise((int)remaining))
             {
                 throw new Exception("Failed to synchronise");
@@ -613,20 +621,26 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        protected void OnSynchroniseTimer(Object sender, EventArgs e)
+        protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
         {
             if (IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
                 _synchroniseTimer.Stop();
                 if (!Synchronise() && !Connecting)
                 {
-                    Reconnect();
+                    try
+                    {
+                        Reconnect();
+                    } catch (Exception e)
+                    {
+                        Console.WriteLine("OnSynchroiseTimer: Exception {0}", e.Message);
+                    }
                 }
                 _synchroniseTimer.Start();
             }
         }
 
-        public byte RequestStatus()
+        public byte RequestStatus(bool tag = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST);
@@ -636,7 +650,7 @@ namespace Chetch.Arduino2
 
         public bool Synchronise(int timeout = 2000)
         {
-            if (!IsReady) throw new Exception("Cannot synchronise as ADM is not ready");
+            if (!IsReady) throw new InvalidOperationException("Cannot synchronise as ADM is not ready");
             
             Console.WriteLine("Started synchronising...");
             Synchronising = true;

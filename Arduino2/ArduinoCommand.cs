@@ -8,12 +8,12 @@ namespace Chetch.Arduino2
 {
     public class ArduinoCommand
     {
-        static ArduinoCommand Delay(int delay)
+        public static ArduinoCommand Delay(int delay)
         {
             return new ArduinoCommand(delay);
         }
 
-        static ArduinoCommand Enable(bool enable)
+        public static ArduinoCommand Enable(bool enable)
         {
             var cmd = new ArduinoCommand(DeviceCommand.ENABLE);
             cmd.AddParameter(enable);
@@ -23,7 +23,8 @@ namespace Chetch.Arduino2
         public enum DeviceCommand
         {
             NONE = 0,
-            TEST = 1,
+            COMPOUND,
+            TEST,
             ENABLE,
             DISABLE,
             START,
@@ -40,7 +41,7 @@ namespace Chetch.Arduino2
 
         public int DelayInterval { get; internal set; } = 0;
 
-        List<ArduinoCommand> Commands = new List<ArduinoCommand>();
+        public List<ArduinoCommand> Commands { get; internal set; } = new List<ArduinoCommand>();
 
         public bool IsCompound => Commands != null && Commands.Count > 0;
 
@@ -73,6 +74,19 @@ namespace Chetch.Arduino2
             foreach(var p in parameters)
             {
                 AddParameter(p);
+            }
+        }
+
+        public void AddCommand(ArduinoCommand cmd)
+        {
+            Commands.Add(cmd);
+        }
+
+        public void AddCommands(params ArduinoCommand[] cmds)
+        {
+            foreach(var cmd in cmds)
+            {
+                AddCommand(cmd);
             }
         }
     }
