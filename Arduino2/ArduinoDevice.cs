@@ -33,7 +33,10 @@ namespace Chetch.Arduino2
             DEVICE_COMMAND,
         }
 
+       
         protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+
+        private Dictionary<byte, List<byte>> _tagMappings = new Dictionary<byte, List<byte>>();
 
         public ArduinoDeviceManager ADM { get; set; }
 
@@ -130,6 +133,11 @@ namespace Chetch.Arduino2
                     HandleCommandResponse(deviceCommand, message);
                     break;
             }
+
+            if(message.Tag > 0)
+            {
+                message.Tag = MessageTags.Release(message.Tag);
+            }
         }
 
         public ArduinoCommand AddCommand(ArduinoCommand cmd)
@@ -164,6 +172,7 @@ namespace Chetch.Arduino2
         }
 
 
+        
         private Task _executeCommandTask = null;
         public byte ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
         {
@@ -177,7 +186,7 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
             }
 
-            byte tag = MessageTags.CreateTag();
+            byte tag = MessageTags.CreateTagSet(Math.Max(MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval));
             Action action = () =>
             {
                 ExecuteCommand(cmd, tag, parameters);
@@ -231,7 +240,7 @@ namespace Chetch.Arduino2
                     {
                         //assume the command is a message
                         var cm = CreateMessage(MessageType.COMMAND);
-                        cm.Tag = tag;
+                        cm.Tag = MessageTags.CreateTagInSet(tag);
                         cm.AddArgument((byte)cmd.Command);
                         foreach (var p in allParams)
                         {

@@ -47,6 +47,8 @@ namespace Chetch.Arduino2
 
         public bool IsDelay => Command == DeviceCommand.NONE && DelayInterval > 0;
 
+        public int TotalDelayInterval { get; internal set; } = 0;
+
         public ArduinoCommand(DeviceCommand command, String alias = null)
         {
             Command = command;
@@ -66,7 +68,9 @@ namespace Chetch.Arduino2
 
         public void AddParameter(ValueType parameter)
         {
+            if (IsDelay) throw new InvalidOperationException("Cannot add parameter to a delay command");
             Parameters.Add(parameter);
+            UpdateTotals();
         }
 
         public void AddParameters(params ValueType[] parameters)
@@ -79,7 +83,9 @@ namespace Chetch.Arduino2
 
         public void AddCommand(ArduinoCommand cmd)
         {
+            if (IsDelay) throw new InvalidOperationException("Cannot add sub command to a delay command");
             Commands.Add(cmd);
+            UpdateTotals();
         }
 
         public void AddCommands(params ArduinoCommand[] cmds)
@@ -87,6 +93,22 @@ namespace Chetch.Arduino2
             foreach(var cmd in cmds)
             {
                 AddCommand(cmd);
+            }
+        }
+
+        public void UpdateTotals()
+        {
+            TotalDelayInterval = 0;
+            if (!IsCompound)
+            {
+                TotalDelayInterval = DelayInterval;
+            } else
+            {
+                foreach(var cmd in Commands)
+                {
+                    cmd.UpdateTotals();
+                    TotalDelayInterval += cmd.TotalDelayInterval;
+                }
             }
         }
     }
