@@ -47,6 +47,18 @@ namespace Chetch.Arduino2
 
         public bool IsDelay => Command == DeviceCommand.NONE && DelayInterval > 0;
 
+        private int _repeat = 1;
+        public int Repeat 
+        { 
+            get { return _repeat; }
+            set
+            {
+                if (_repeat <= 0) throw new ArgumentException("Repeat value must be 1 or greater");
+                _repeat = value;
+                UpdateTotals();
+            }
+        }
+
         public int TotalDelayInterval { get; internal set; } = 0;
 
         public ArduinoCommand(DeviceCommand command, String alias = null)
@@ -101,7 +113,7 @@ namespace Chetch.Arduino2
             TotalDelayInterval = 0;
             if (!IsCompound)
             {
-                TotalDelayInterval = DelayInterval;
+                TotalDelayInterval = Repeat*DelayInterval;
             } else
             {
                 foreach(var cmd in Commands)
@@ -109,6 +121,7 @@ namespace Chetch.Arduino2
                     cmd.UpdateTotals();
                     TotalDelayInterval += cmd.TotalDelayInterval;
                 }
+                TotalDelayInterval *= Repeat;
             }
         }
     }

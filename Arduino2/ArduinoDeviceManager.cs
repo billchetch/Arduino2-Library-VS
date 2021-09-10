@@ -18,6 +18,7 @@ namespace Chetch.Arduino2
         public const byte ADM_STREAM_TARGET_ID = 255;
         public const int ADM_MESSAGE_SIZE = 50; //in bytes
         public const int DEFAULT_CONNECT_TIMEOUT = 5000;
+        public const int DEFAULT_SYNCHRONISE_TIMEOUT = 3000;
         public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
         public const int DEFAULT_INACTIVITY_TTIMEOUT = 5000;
 
@@ -245,6 +246,12 @@ namespace Chetch.Arduino2
         public void Disconnect()
         {
             if (Connecting) throw new Exception("ADM is in the process of connecting");
+            if (_synchroniseTimer != null)
+            {
+                Console.WriteLine("Stopping sync timer...");
+                _synchroniseTimer.Stop();
+            }
+            
             if (_sfc.IsOpen)
             {
                 _sfc.Close();
@@ -256,12 +263,15 @@ namespace Chetch.Arduino2
         {
             Console.WriteLine("Reconnecting...");
             Disconnect();
-            wait(100);
             Connect(_connectTimeout);
-            wait(100);
+            Console.WriteLine("Connected = {0}", Connected);
             if (!IsReady || !Synchronise())
             {
                 Initialise(); //this will start init config process
+            }
+            if (_synchroniseTimer != null)
+            {
+                _synchroniseTimer.Start();
             }
         }
 
@@ -279,13 +289,9 @@ namespace Chetch.Arduino2
                     break;
             }
 
-            Console.WriteLine("ERROR: Stream error: {0} {1}", e.Error, e.Exception == null ? "N / A" : e.Exception.Message);
-            if (!sfc.IsOpen && !Connecting) 
+            if (!sfc.IsOpen) 
             {
-                Task.Run(() =>
-                {
-                    Reconnect();
-                });
+                if(!Connecting)Reconnect();
             }
         }
 
@@ -438,6 +444,12 @@ namespace Chetch.Arduino2
                             }
                             break;
                     }
+
+                    //release message tags used by the board
+                    if (message.Tag > 0)
+                    {
+                        message.Tag = MessageTags.Release(message.Tag);
+                    }
                 }
                 else if (message.TargetID == ADM_STREAM_TARGET_ID)
                 {
@@ -451,6 +463,7 @@ namespace Chetch.Arduino2
                     {
                         throw new Exception(String.Format("Device {0} not found", message.TargetID));
                     }
+                    //message tags will be released by the device as each device manages its own tags
                     dev.HandleMessage(message);
 
                     //we work out where we are in terms of device state ... if all are of the same state then this updates
@@ -518,7 +531,10 @@ namespace Chetch.Arduino2
 
         public void SendMessage(ADMMessage message)
         {
-            if (!_sfc.IsReady && !Connecting) throw new Exception("ADM is not able to send messages");
+            if (!_sfc.IsReady && !Connecting)
+            {
+                throw new Exception("ADM is not able to send messages");
+            }
 
             Frame messageFrame = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM, MessageEncoding.BYTES_ARRAY);
             List<byte> bts2send = new List<byte>();
@@ -608,7 +624,7 @@ namespace Chetch.Arduino2
             {
                 throw new TimeoutException(String.Format("Timed out Waiting for {0} readiness", _devices.Count > 0 ? "Device" : "ADM"));
             }
-            if (!Synchronise((int)remaining))
+            if (!Synchronise((int)System.Math.Max(DEFAULT_SYNCHRONISE_TIMEOUT, remaining)))
             {
                 throw new Exception("Failed to synchronise");
             }
@@ -623,13 +639,16 @@ namespace Chetch.Arduino2
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
         {
-            if (IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
+            if (!_synchroniseTimer.Enabled) return;
+
+            if (IsReady && !Synchronising && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
                 _synchroniseTimer.Stop();
                 if (!Synchronise() && !Connecting)
                 {
                     try
                     {
+                        Console.WriteLine("OnSnchroniseTimer: Synchronise failed so attempting reconnect.");
                         Reconnect();
                     } catch (Exception e)
                     {
@@ -648,11 +667,11 @@ namespace Chetch.Arduino2
             return message.Tag;
         }
 
-        public bool Synchronise(int timeout = 2000)
+        public bool Synchronise(int timeout = DEFAULT_SYNCHRONISE_TIMEOUT)
         {
             if (!IsReady) throw new InvalidOperationException("Cannot synchronise as ADM is not ready");
             
-            Console.WriteLine("Started synchronising...");
+            //Console.WriteLine("Started synchronising...");
             Synchronising = true;
             RequestStatus();
             DateTime started = DateTime.Now;

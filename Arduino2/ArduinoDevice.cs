@@ -186,7 +186,9 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
             }
 
-            byte tag = MessageTags.CreateTagSet(Math.Max(MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval));
+            int ttl = Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
+            Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
+            byte tag = MessageTags.CreateTagSet(ttl);
             Action action = () =>
             {
                 ExecuteCommand(cmd, tag, parameters);
@@ -209,48 +211,57 @@ namespace Chetch.Arduino2
             return ExecuteCommand(commandAlias, parameters.ToList());
         }
 
+        public byte ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params ValueType[] parameters)
+        {
+            return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
+        }
+
         protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<ValueType> parameters = null)
         {
-            if (cmd.IsCompound)
+            for (int i = 0; i < cmd.Repeat; i++)
             {
-                //TODO: how to handle parameters in the case of a compound command???
-                foreach(var c in cmd.Commands)
+                if (cmd.IsCompound)
                 {
-                    ExecuteCommand(c, tag, parameters);
-                }
-            }
-            else
-            {
-                if (cmd.IsDelay)
-                {
-                    Thread.Sleep(cmd.DelayInterval);
+                    //TODO: how to handle parameters in the case of a compound command???
+                    foreach (var c in cmd.Commands)
+                    {
+                        ExecuteCommand(c, tag, parameters);
+                    }
                 }
                 else
                 {
-                    if (cmd.Command == ArduinoCommand.DeviceCommand.NONE)
+                    if (cmd.IsDelay)
                     {
-                        throw new Exception("DeviceCommand is NONE but ths is not a delay");
+                        Console.WriteLine("------> Delaing execution for {0} ms", cmd.DelayInterval);
+                        Thread.Sleep(cmd.DelayInterval);
                     }
-
-
-                    List<ValueType> allParams = new List<ValueType>();
-                    if (cmd.Parameters != null) allParams.AddRange(cmd.Parameters);
-                    if (parameters != null) allParams.AddRange(parameters);
-                    if (HandleCommand(cmd, allParams))
+                    else
                     {
-                        //assume the command is a message
-                        var cm = CreateMessage(MessageType.COMMAND);
-                        cm.Tag = MessageTags.CreateTagInSet(tag);
-                        cm.AddArgument((byte)cmd.Command);
-                        foreach (var p in allParams)
+                        if (cmd.Command == ArduinoCommand.DeviceCommand.NONE)
                         {
-                            cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                            throw new Exception("DeviceCommand is NONE but ths is not a delay");
                         }
-                        Console.WriteLine("Sending command {0}", cmd.Command);
-                        //ADM.SendMessage(cm);
-                    }
-                } //if delay
-            } //if compound
+
+
+                        List<ValueType> allParams = new List<ValueType>();
+                        if (cmd.Parameters != null) allParams.AddRange(cmd.Parameters);
+                        if (parameters != null) allParams.AddRange(parameters);
+                        if (HandleCommand(cmd, allParams))
+                        {
+                            //assume the command is a message
+                            var cm = CreateMessage(MessageType.COMMAND);
+                            cm.Tag = MessageTags.CreateTagInSet(tag);
+                            cm.AddArgument((byte)cmd.Command);
+                            foreach (var p in allParams)
+                            {
+                                cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                            }
+                            Console.WriteLine("------> Sending command {0}", cmd.Command);
+                            ADM.SendMessage(cm);
+                        }
+                    } //if delay
+                } //if compound
+            } //end repeat
         }
 
         //Called before sending command (for instance to update state) return value determines whether command is executed.
@@ -280,7 +291,7 @@ namespace Chetch.Arduino2
 
         public void Enable(bool enabled = true)
         {
-            ExecuteCommand("enable", enabled);
+            ExecuteCommand(ArduinoCommand.DeviceCommand.ENABLE, enabled);
         }
 
         public void Disable()
@@ -307,7 +318,8 @@ namespace Chetch.Arduino2
             var d1 = ArduinoCommand.Delay(1000);
             var d5 = ArduinoCommand.Delay(5000);
             var cmd = AddCommand(ArduinoCommand.DeviceCommand.COMPOUND, "test");
-            cmd.AddCommands(enable, d1, disable);
+            cmd.Repeat = 4;
+            cmd.AddCommands(enable, d5, disable, d1, enable, d1, disable);
         }
 
         public int GetArgumentIndex(ADMMessage message, MessageField field)
