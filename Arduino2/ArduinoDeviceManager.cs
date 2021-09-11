@@ -85,28 +85,9 @@ namespace Chetch.Arduino2
 
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
-
-        private bool _connected = false;
-        private bool _connecting = false;
-        public bool Connecting
-        {
-            get{ return _connecting; }
-            internal set
-            {
-                _connecting = value;
-                if (_connecting) _connected = false;
-            }
-        }
-        public bool Connected
-        {
-            get{ return _connected; }
-            internal set
-            {
-                _connected = value;
-                if (_connected) _connecting = false;
-            }
-        }
-
+        public bool Connecting { get; internal set; } = false;
+        public bool IsConnected => _sfc.IsReady; //an alias for the readiness of the connection
+        
         private bool _synchronising = false;
         private bool _synchronised = false;
         public bool Synchronising
@@ -147,8 +128,8 @@ namespace Chetch.Arduino2
 
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
-        public bool IsBoardReady => Connected && ((int)State >= (int)ADMState.CONFIGURED);
-        public bool IsDeviceReady => Connected && (State == ADMState.DEVICE_CONFIGURED);
+        public bool IsBoardReady => IsConnected && ((int)State >= (int)ADMState.CONFIGURED);
+        public bool IsDeviceReady => IsConnected && (State == ADMState.DEVICE_CONFIGURED);
 
         public bool IsReady => IsEmpty ? IsBoardReady : IsDeviceReady;
 
@@ -186,7 +167,7 @@ namespace Chetch.Arduino2
         public void Connect(int timeout = -1)
         {
             if (Connecting) throw new InvalidOperationException("ADM is in the process of connecting");
-            if (Connected) throw new InvalidOperationException("ADM is already connected");
+            if (IsConnected) throw new InvalidOperationException("ADM is already connected");
             if (_sfc.IsOpen) throw new InvalidOperationException("Underlying stream is open");
             try
             {
@@ -233,45 +214,29 @@ namespace Chetch.Arduino2
 
                 //by here the stream is open and reset and ready for use
                 Console.WriteLine("Stream is Ready!");
-                Connected = true;
             }
             catch (Exception e)
             {
-                Connected = false;
-                Connecting = false;
                 throw e;
+            }
+            finally
+            {
+                Connecting = false;
             }
         }
 
         public void Disconnect()
         {
             if (Connecting) throw new Exception("ADM is in the process of connecting");
+            Console.WriteLine("Disconnecting...");
             if (_synchroniseTimer != null)
             {
-                Console.WriteLine("Stopping sync timer...");
                 _synchroniseTimer.Stop();
             }
             
             if (_sfc.IsOpen)
             {
                 _sfc.Close();
-            }
-            Connected = false;
-        }
-
-        public void Reconnect()
-        {
-            Console.WriteLine("Reconnecting...");
-            Disconnect();
-            Connect(_connectTimeout);
-            Console.WriteLine("Connected = {0}", Connected);
-            if (!IsReady || !Synchronise())
-            {
-                Initialise(); //this will start init config process
-            }
-            if (_synchroniseTimer != null)
-            {
-                _synchroniseTimer.Start();
             }
         }
 
@@ -287,11 +252,6 @@ namespace Chetch.Arduino2
 
                 default:
                     break;
-            }
-
-            if (!sfc.IsOpen) 
-            {
-                if(!Connecting)Reconnect();
             }
         }
 
@@ -639,24 +599,32 @@ namespace Chetch.Arduino2
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
         {
-            if (!_synchroniseTimer.Enabled) return;
+            if (Connecting || Synchronising) return;
 
-            if (IsReady && !Synchronising && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
+            _synchroniseTimer.Stop();
+            if (!IsConnected)
             {
-                _synchroniseTimer.Stop();
-                if (!Synchronise() && !Connecting)
+                Console.WriteLine("Reconnecting...");
+                try
                 {
-                    try
+                    Disconnect();
+                    Connect(_connectTimeout);
+                    Console.WriteLine("Connected = {0}", Connected);
+                    if (!IsReady || !Synchronise())
                     {
-                        Console.WriteLine("OnSnchroniseTimer: Synchronise failed so attempting reconnect.");
-                        Reconnect();
-                    } catch (Exception e)
-                    {
-                        Console.WriteLine("OnSynchroiseTimer: Exception {0}", e.Message);
+                        Initialise(); //this will start init config process
                     }
                 }
-                _synchroniseTimer.Start();
+                catch (Exception e)
+                {
+                    Console.WriteLine("Reconnect error: {0}", e.Message);
+
+                }
+            } else if(IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
+            {
+                Synchronise();
             }
+            _synchroniseTimer.Start();
         }
 
         public byte RequestStatus(bool tag = false)
