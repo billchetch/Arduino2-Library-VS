@@ -609,7 +609,7 @@ namespace Chetch.Arduino2
                 {
                     Disconnect();
                     Connect(_connectTimeout);
-                    Console.WriteLine("Connected = {0}", Connected);
+                    Console.WriteLine("Connected = {0}", IsConnected);
                     if (!IsReady || !Synchronise())
                     {
                         Initialise(); //this will start init config process
