@@ -40,12 +40,17 @@
     <Reference Include="Chetch.RestAPI">
       <HintPath>..\..\RestAPI\RestAPI\bin\Debug\Chetch.RestAPI.dll</HintPath>
     </Reference>
+    <Reference Include="Chetch.Services, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Services\Services\bin\Debug\Chetch.Services.dll</HintPath>
+    </Reference>
     <Reference Include="Chetch.Utilities, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Utilities\Utilities\bin\Debug\Chetch.Utilities.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -54,6 +59,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ADMService.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="ArduinoCommand.cs" />
     <Compile Include="ArduinoDevice.cs" />
     <Compile Include="ArduinoDeviceManager.cs" />

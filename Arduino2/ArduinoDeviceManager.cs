@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 using Chetch.Utilities;
 using Chetch.Utilities.Streams;
 using Chetch.Messaging;
@@ -73,6 +74,7 @@ namespace Chetch.Arduino2
             var serial = new SerialPortX(ports[0], baudRate);
             var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
             var adm = new ArduinoDeviceManager(sfc, connectTimeout);
+            adm.ID = ports[0];
             return adm;
         }
         public static ArduinoDeviceManager Create(String serviceName, String networkServiceURL, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
@@ -80,8 +82,12 @@ namespace Chetch.Arduino2
             var cnn = new ArduinoTCPConnection(serviceName, networkServiceURL);
             var sfc = new StreamFlowController(cnn, localUartSize, remoteUartSize);
             var adm = new ArduinoDeviceManager(sfc, connectTimeout);
+            adm.ID = serviceName;
             return adm;
         }
+
+        public TraceSource Tracing { get; set; } = null;
+        public String ID { get; set; }
 
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
@@ -119,7 +125,7 @@ namespace Chetch.Arduino2
             internal set
             {
                 //TODO: add an event handler here for external code to monitor ADM state changes
-                Console.WriteLine("ADM State = {0}", value);
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} State =", ID, value);
                 _state = value;
             }
         }
@@ -158,6 +164,7 @@ namespace Chetch.Arduino2
             {
                 if (Measurement.HasTimedOut(started, timeout))
                 {
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, timeoutMessage);
                     throw new TimeoutException(timeoutMessage);
                 }
             }
@@ -187,14 +194,14 @@ namespace Chetch.Arduino2
                         }
                     }
 
-                    Console.WriteLine("Attempting to open stream...");
+                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Attempting to open stream... ", ID);
                     try
                     {
                         _sfc.Open();
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.Message);
+                        Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, e.Message);
                     }
                     if (!_sfc.IsOpen)
                     {
@@ -203,17 +210,17 @@ namespace Chetch.Arduino2
                     
                 } while (!_sfc.IsOpen);
 
-                Console.WriteLine("Stream opened");
+                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Stream opened!", ID);
 
                 //we now wait for the stream flow controller to synchronise stream reset
                 while (!_sfc.IsReady)
                 {
-                    Console.WriteLine("Waiting for remote to reset...");
+                    //Console.WriteLine("Waiting for remote to reset...");
                     wait(500, started, timeout, "Connecting timed out waiting for stream to become ready");
                 }
 
                 //by here the stream is open and reset and ready for use
-                Console.WriteLine("Stream is Ready!");
+                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Stream is ready!", ID);
             }
             catch (Exception e)
             {
@@ -228,7 +235,7 @@ namespace Chetch.Arduino2
         public void Disconnect()
         {
             if (Connecting) throw new Exception("ADM is in the process of connecting");
-            Console.WriteLine("Disconnecting...");
+            Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Disconnecting...", ID);
             if (_synchroniseTimer != null)
             {
                 _synchroniseTimer.Stop();
@@ -238,13 +245,14 @@ namespace Chetch.Arduino2
             {
                 _sfc.Close();
             }
+            Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Disconnected", ID);
         }
 
         void HandleStreamError(Object sender, StreamFlowController.StreamErrorArgs e)
         {
             StreamFlowController sfc = (StreamFlowController)sender;
 
-            Console.WriteLine("Stream error: {0} {1}", e.Error, e.Exception == null ? "N/A" : e.Exception.Message);
+            Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Stream Error: {1} {2}", ID, e.Error, e.Exception == null ? "N/A" : e.Exception.Message);
             switch (e.Error)
             {
                 case StreamFlowController.ErrorCode.UNEXPECTED_DISCONNECT:
@@ -374,7 +382,7 @@ namespace Chetch.Arduino2
                                 State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
                                 foreach (var dev in _devices.Values)
                                 {
-                                    Console.WriteLine("Initialising {0}", dev.ID);
+                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
                                     dev.Initialise();
                                     //Thread.Sleep(500);
                                 }
@@ -461,7 +469,7 @@ namespace Chetch.Arduino2
             }
             catch (Exception ex)
             {
-                Console.WriteLine("HandleStreamData excepion: {0}", ex.Message);
+                Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, ex.Message);
             }
 
             if (message != null && IsBoardReady && MessageReceived != null)
@@ -604,21 +612,20 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Stop();
             if (!IsConnected)
             {
-                Console.WriteLine("Reconnecting...");
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} Reconnecting ...", ID);
                 try
                 {
                     Disconnect();
                     Connect(_connectTimeout);
-                    Console.WriteLine("Connected = {0}", IsConnected);
-                    if (!IsReady || !Synchronise())
+                    Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} Connected = {1}", ID, IsConnected);
+                    if (!IsReady)
                     {
                         Initialise(); //this will start init config process
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Reconnect error: {0}", e.Message);
-
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} OnSynchroniseTimer Error: {1}", ID, e.Message);
                 }
             } else if(IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
