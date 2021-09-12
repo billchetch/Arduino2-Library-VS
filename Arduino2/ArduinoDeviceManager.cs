@@ -130,7 +130,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+        public ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
 
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
@@ -156,6 +156,20 @@ namespace Chetch.Arduino2
             _sfc.EventByteReceived += HandleStreamEventByteReceived;
             _sfc.EventByteSent += HandleStreamEventByteSent;
             _connectTimeout = connectTimeout;
+        }
+
+        virtual public void Serialize(Dictionary<String, Object> vals, bool includeDevices = false)
+        {
+            vals["ID"] = ID;
+            vals["LastMessageReceived"] = LastMessageReceived.ToString();
+            vals["DeviceCount"] = _devices.Count;
+            vals["State"] = State.ToString();
+            vals["Connected"] = IsConnected;
+
+            if (includeDevices)
+            {
+                //TODO: serialize devices
+            }
         }
 
         private void wait(int sleep, DateTime started = default(DateTime), int timeout = -1, String timeoutMessage = "Timed out!")
@@ -573,6 +587,11 @@ namespace Chetch.Arduino2
             return null;
         }
 
+        public List<ArduinoDevice> GetDevices()
+        {
+            return _devices.Values.ToList();
+        }
+
         public void Begin(int timeout, bool allowNoDevices = false)
         {
             //will close the stream if it's open and set Connected to false
@@ -638,6 +657,14 @@ namespace Chetch.Arduino2
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST);
+            SendMessage(message);
+            return message.Tag;
+        }
+
+        public byte Ping(bool tag = false)
+        {
+            if (!IsBoardReady) throw new Exception("ADM is not ready");
+            var message = CreateMessage(MessageType.PING);
             SendMessage(message);
             return message.Tag;
         }

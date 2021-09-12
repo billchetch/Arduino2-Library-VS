@@ -42,6 +42,9 @@ namespace Chetch.Arduino2
 
         
         public String ID { get; internal set; }
+
+        public String FullID => ADM.ID + "-" + ID;
+
         public String Name { get; internal set; }
         public byte BoardID { get; set; }
 
@@ -61,6 +64,14 @@ namespace Chetch.Arduino2
             Name = name.ToUpper();
 
             AddCommand(ArduinoCommand.DeviceCommand.ENABLE);
+        }
+
+        virtual public void Serialize(Dictionary<String, Object> vals)
+        {
+            vals["ID"] = ID;
+            vals["Name"] = Name;
+            vals["Category"] = Category.ToString();
+            vals["Enabled"] = Enabled;
         }
 
         public ADMMessage CreateMessage(MessageType messageType, bool tag = false)
@@ -142,8 +153,7 @@ namespace Chetch.Arduino2
 
         public ArduinoCommand AddCommand(ArduinoCommand cmd)
         {
-            String alias = cmd.Alias == null ? cmd.Command.ToString() : cmd.Alias;
-            alias = alias.ToLower();
+            String alias = cmd.Alias;
             if (_commands.ContainsKey(alias))
             {
                 throw new Exception(String.Format("Cannot add command {0} as it already is present", alias));
@@ -162,12 +172,12 @@ namespace Chetch.Arduino2
 
         public ArduinoCommand AddCommand(ArduinoCommand.DeviceCommand deviceCommand)
         {
-            return AddCommand(deviceCommand, deviceCommand.ToString().ToLower());
+            return AddCommand(deviceCommand, deviceCommand.ToString());
         }
 
         protected ArduinoCommand GetCommand(String alias)
         {
-            alias = alias.ToLower();
+            alias = alias.Trim().ToLower();
             return _commands.ContainsKey(alias) ? _commands[alias] : null;
         }
 
@@ -308,10 +318,12 @@ namespace Chetch.Arduino2
             TEST_VALUE = 0
         }
 
+        public int TestValue { get; internal set; }
+
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
-            Enabled = false;
+            Enabled = true;
 
             var enable = ArduinoCommand.Enable(true);
             var disable = ArduinoCommand.Enable(false);
@@ -320,6 +332,12 @@ namespace Chetch.Arduino2
             var cmd = AddCommand(ArduinoCommand.DeviceCommand.COMPOUND, "test");
             cmd.Repeat = 4;
             cmd.AddCommands(enable, d5, disable, d1, enable, d1, disable);
+        }
+
+        public override void Serialize(Dictionary<string, object> vals)
+        {
+            base.Serialize(vals);
+            vals["TestValue"] = TestValue;
         }
 
         public int GetArgumentIndex(ADMMessage message, MessageField field)
@@ -335,6 +353,19 @@ namespace Chetch.Arduino2
         {
             base.Configure();
 
+        }
+
+        public override void HandleMessage(ADMMessage message)
+        {
+            base.HandleMessage(message);
+            int argIdx;
+            switch (message.Type)
+            {
+                case MessageType.DATA:
+                    argIdx = GetArgumentIndex(message, MessageField.TEST_VALUE);
+                    TestValue = message.ArgumentAsInt(argIdx);
+                    break;
+            }
         }
     }
 }

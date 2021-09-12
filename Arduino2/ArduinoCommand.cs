@@ -64,18 +64,19 @@ namespace Chetch.Arduino2
         public ArduinoCommand(DeviceCommand command, String alias = null)
         {
             Command = command;
-            Alias = alias;
+            Alias = alias == null ? command.ToString().ToLower() : alias.Trim().ToLower();
         }
 
         public ArduinoCommand(DeviceCommand command, ValueType parameter, String alias = null)
         {
             Command = command;
-            Alias = alias;
+            Alias = alias == null ? command.ToString().ToLower() : alias.Trim().ToLower();
             AddParameter(parameter);
         }
         ArduinoCommand(int delay) : this(DeviceCommand.NONE)
         {
             DelayInterval = delay;
+            Alias = "delay";
         }
 
         public void AddParameter(ValueType parameter)
