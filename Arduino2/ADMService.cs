@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.ComponentModel;
 using Chetch.Messaging;
 using Chetch.Arduino;
 using Chetch.Services;
+using Chetch.Database;
+using Chetch.Utilities;
 
 namespace Chetch.Arduino2
 {
@@ -92,8 +95,9 @@ namespace Chetch.Arduino2
                 }
             }
         }
-    
 
+
+        protected ADMServiceDB ServiceDB { get; set; }
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         private List<ADMRequest> _admRequests = new List<ADMRequest>();
 
@@ -118,13 +122,75 @@ namespace Chetch.Arduino2
             AddCommandHelp("adm/<board>:<device>:" + MessageSchema.COMMAND_STATUS, "Status of device");
         }
 
+        protected override void OnStart(string[] args)
+        {
+            if (ServiceDB != null)
+            {
+                foreach (var adm in _adms.Values)
+                {
+                    var devices = adm.GetDevices();
+                    foreach (var dev in devices)
+                    {
+                        dev.PropertyChanged += HandleADMPropertyChange;
+                    }
+                }
+            }
+
+            base.OnStart(args);
+        }
+
         protected override void OnStop()
         {
             foreach (var adm in _adms.Values)
             {
                 adm.Disconnect();
             }
+
+            if(ServiceDB != null)
+            {
+                foreach (var adm in _adms.Values)
+                {
+                    var devices = adm.GetDevices();
+                    foreach (var dev in devices)
+                    {
+                        try
+                        {
+                            Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                            dev.Serialize(vals);
+                            SysInfo si = new SysInfo(dev.FullID, vals);
+                            ServiceDB.SaveSysInfo(si);
+                        } catch (Exception e)
+                        {
+                            Tracing?.TraceEvent(TraceEventType.Error, 0, "Error saving device to DB: {1}", e.Message);
+                        }
+                    }
+                }
+            }
+
             base.OnStop();
+        }
+
+        //loggging
+        protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
+        {
+            DSOPropertyChangedEventArgs dsoArgs = (DSOPropertyChangedEventArgs)eargs;
+            if (sender is ArduinoDevice)
+            {
+                try
+                {
+                    ArduinoDevice device = (ArduinoDevice)sender;
+                    String name = dsoArgs.PropertyName;
+                    String info = String.Format("{0} changed from {1} to {2}", name, dsoArgs.OldValue, dsoArgs.NewValue);
+                    ServiceDB.LogEvent((ArduinoDevice)sender, dsoArgs.PropertyName, dsoArgs.NewValue, info);
+                } catch (Exception e)
+                {
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
+                }
+
+            } else if(sender is ArduinoDeviceManager)
+            {
+
+            }
         }
 
         public override void HandleClientError(Connection cnn, Exception e)
@@ -297,9 +363,11 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
+                                AddADMRequest(adm, adm.RequestStatus(), response);
                                 break;
 
                             case MessageSchema.COMMAND_PING:
+                                AddADMRequest(adm, adm.Ping(), response);
                                 break;
 
                             case MessageSchema.COMMAND_LIST_DEVICES:
@@ -307,17 +375,13 @@ namespace Chetch.Arduino2
                         }
                     } else
                     {
-                        if(tgtcmd.Length < 4)
-                        {
-                            throw new Exception(String.Format("No device command found when parsing command: {0}", command));
-                        }
-                        String deviceID = tgtcmd[2].Trim();
+                        String deviceID = tgtcmd[1].Trim();
                         ArduinoDevice device = adm.GetDevice(deviceID);
                         if(device == null)
                         {
                             throw new Exception(String.Format("Cannot find device {0}", deviceID));
                         }
-                        List<String> deviceCommands = tgtcmd[3].Split(',').ToList();
+                        List<String> deviceCommands = tgtcmd[2].Split(',').ToList();
                         //these commands are relaed to the device ... firs are meta commands ... the rest need to be sent to the device
                         switch (deviceCommands[0])
                         {
@@ -393,6 +457,8 @@ namespace Chetch.Arduino2
                     {
                         Broadcast(messageToBroadcast);
                     }
+
+                    //now we
                 } 
             } catch (Exception e)
             {

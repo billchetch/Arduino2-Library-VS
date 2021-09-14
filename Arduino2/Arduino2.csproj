@@ -34,6 +34,10 @@
     <Reference Include="Chetch.Arduino">
       <HintPath>..\..\Arduino\Arduino\bin\Debug\Chetch.Arduino.dll</HintPath>
     </Reference>
+    <Reference Include="Chetch.Database, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Database\Database\bin\Debug\Chetch.Database.dll</HintPath>
+    </Reference>
     <Reference Include="Chetch.Messaging">
       <HintPath>..\..\Messaging\Messaging\bin\Debug\Chetch.Messaging.dll</HintPath>
     </Reference>
@@ -51,6 +55,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -62,6 +67,7 @@
     <Compile Include="ADMService.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ADMServiceDB.cs" />
     <Compile Include="ArduinoCommand.cs" />
     <Compile Include="ArduinoDevice.cs" />
     <Compile Include="ArduinoDeviceManager.cs" />

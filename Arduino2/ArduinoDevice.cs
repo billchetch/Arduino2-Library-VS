@@ -6,10 +6,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Chetch.Messaging;
 using Chetch.Arduino;
+using Chetch.Utilities;
 
 namespace Chetch.Arduino2
 {
-    abstract public class ArduinoDevice
+    abstract public class ArduinoDevice : DataSourceObject
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
@@ -22,7 +23,11 @@ namespace Chetch.Arduino2
             CONFIGURED,
         }
 
-        public DeviceState State { get; internal set; } = DeviceState.CREATED;
+        public DeviceState State
+        {
+            get { return Get<DeviceState>(); }
+            internal set { Set(value, value > DeviceState.CREATED); }
+        }
 
         public enum MessageField
         {
@@ -33,25 +38,47 @@ namespace Chetch.Arduino2
             DEVICE_COMMAND,
         }
 
-       
         protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
-
-        private Dictionary<byte, List<byte>> _tagMappings = new Dictionary<byte, List<byte>>();
 
         public ArduinoDeviceManager ADM { get; set; }
 
-        
-        public String ID { get; internal set; }
+        public String ID
+        {
+            get { return Get<String>(); }
+            internal set { Set(value, false); }
+        }
 
-        public String FullID => ADM.ID + "-" + ID;
+        public String FullID => ADM.ID + ":" + ID;
 
-        public String Name { get; internal set; }
-        public byte BoardID { get; set; }
+        public String Name
+        {
+            get { return Get<String>(); }
+            internal set { Set(value, false); }
+        }
 
-        public DeviceCategory Category { get; protected set; }
-        public bool Enabled { get; internal set; } = true;
+        public byte BoardID
+        {
+            get { return Get<byte>(); }
+            internal set { Set(value, false); }
+        }
 
-        public int ReportInterval { get; set; }
+        public DeviceCategory Category
+        {
+            get { return Get<DeviceCategory>(); }
+            protected set { Set(value, false); }
+        }
+
+        public bool Enabled 
+        { 
+            get { return Get<bool>(); }
+            internal set { Set(value, IsReady); } 
+        } 
+
+        public int ReportInterval
+        {
+            get { return Get<int>(); }
+            set { Set(value, IsReady); }
+        }
 
         public bool IsReady => State == DeviceState.CONFIGURED;
 
@@ -64,14 +91,19 @@ namespace Chetch.Arduino2
             Name = name.ToUpper();
 
             AddCommand(ArduinoCommand.DeviceCommand.ENABLE);
+            AddCommand(ArduinoCommand.DeviceCommand.DISABLE);
+
+            State = DeviceState.CREATED;
         }
 
-        virtual public void Serialize(Dictionary<String, Object> vals)
+        public override void Serialize(Dictionary<string, object> destination)
         {
-            vals["ID"] = ID;
-            vals["Name"] = Name;
-            vals["Category"] = Category.ToString();
-            vals["Enabled"] = Enabled;
+            base.Serialize(destination);
+        }
+
+        public override void Deserialize(Dictionary<string, object> source, bool notify = false)
+        {
+            base.Deserialize(source, notify);
         }
 
         public ADMMessage CreateMessage(MessageType messageType, bool tag = false)
@@ -96,8 +128,9 @@ namespace Chetch.Arduino2
                     return 0;
 
                 case MessageField.ENABLED:
+                case MessageField.REPORT_INTERVAL:
                     return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : (int)field;
-
+                   
                 default:
                     return (int)field;
             }
@@ -181,8 +214,6 @@ namespace Chetch.Arduino2
             return _commands.ContainsKey(alias) ? _commands[alias] : null;
         }
 
-
-        
         private Task _executeCommandTask = null;
         public byte ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
         {
@@ -196,7 +227,7 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
             }
 
-            int ttl = Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
+            int ttl = System.Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
             byte tag = MessageTags.CreateTagSet(ttl);
             Action action = () =>
@@ -280,7 +311,17 @@ namespace Chetch.Arduino2
             switch (cmd.Command)
             {
                 case ArduinoCommand.DeviceCommand.ENABLE:
+                    if (parameters.Count == 0) parameters.Add(true);
                     Enabled = (bool)parameters[0];
+                    break;
+
+                case ArduinoCommand.DeviceCommand.DISABLE:
+                    parameters[0] = false;
+                    Enabled = (bool)parameters[0];
+                    break;
+
+                case ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL:
+                    ReportInterval = (int)parameters[0];
                     break;
             }
             return true;
@@ -293,8 +334,14 @@ namespace Chetch.Arduino2
             switch (deviceCommand)
             {
                 case ArduinoCommand.DeviceCommand.ENABLE:
+                case ArduinoCommand.DeviceCommand.DISABLE:
                     argIdx = GetArgumentIndex(message, MessageField.ENABLED);
                     Enabled = message.ArgumentAsBool(argIdx);
+                    break;
+
+                case ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL:
+                    argIdx = GetArgumentIndex(message, MessageField.REPORT_INTERVAL);
+                    ReportInterval = message.ArgumentAsInt(argIdx);
                     break;
             }
         }
@@ -307,6 +354,11 @@ namespace Chetch.Arduino2
         public void Disable()
         {
             Enable(false);
+        }
+
+        public void SetReportInterval(int interval)
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, interval);
         }
     }
 
@@ -323,7 +375,7 @@ namespace Chetch.Arduino2
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
-            Enabled = true;
+            Enabled = false;
 
             var enable = ArduinoCommand.Enable(true);
             var disable = ArduinoCommand.Enable(false);
@@ -367,5 +419,6 @@ namespace Chetch.Arduino2
                     break;
             }
         }
+
     }
 }

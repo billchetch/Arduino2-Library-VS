@@ -27,6 +27,7 @@ namespace Chetch.Arduino2
             TEST,
             ENABLE,
             DISABLE,
+            SET_REPORT_INTERVAL,
             START,
             STOP,
             PAUSE,
