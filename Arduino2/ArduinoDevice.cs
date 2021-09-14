@@ -26,7 +26,7 @@ namespace Chetch.Arduino2
         public DeviceState State
         {
             get { return Get<DeviceState>(); }
-            internal set { Set(value, value > DeviceState.CREATED); }
+            internal set { Set(value, value > DeviceState.CREATED, false); }
         }
 
         public enum MessageField
@@ -42,48 +42,31 @@ namespace Chetch.Arduino2
 
         public ArduinoDeviceManager ADM { get; set; }
 
-        public String ID
-        {
-            get { return Get<String>(); }
-            internal set { Set(value, false); }
-        }
+        public String ID { get; internal set; }
 
         public String FullID => ADM.ID + ":" + ID;
 
-        public String Name
-        {
-            get { return Get<String>(); }
-            internal set { Set(value, false); }
-        }
+        public String Name { get; internal set; } 
 
-        public byte BoardID
-        {
-            get { return Get<byte>(); }
-            internal set { Set(value, false); }
-        }
+        public byte BoardID { get; internal set; }
 
-        public DeviceCategory Category
-        {
-            get { return Get<DeviceCategory>(); }
-            protected set { Set(value, false); }
-        }
+        public DeviceCategory Category { get; internal set; }
 
         public bool Enabled 
         { 
             get { return Get<bool>(); }
-            internal set { Set(value, IsReady); } 
+            internal set { Set(value, IsReady, true); } 
         } 
 
         public int ReportInterval
         {
             get { return Get<int>(); }
-            set { Set(value, IsReady); }
+            set { Set(value, IsReady, true); }
         }
 
         public bool IsReady => State == DeviceState.CONFIGURED;
 
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
-
 
         public ArduinoDevice(String id, String name)
         {
@@ -106,6 +89,8 @@ namespace Chetch.Arduino2
             base.Deserialize(source, notify);
         }
 
+
+        
         public ADMMessage CreateMessage(MessageType messageType, bool tag = false)
         {
             var message = new ADMMessage();
@@ -316,8 +301,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case ArduinoCommand.DeviceCommand.DISABLE:
-                    parameters[0] = false;
-                    Enabled = (bool)parameters[0];
+                    Enabled = false;
                     break;
 
                 case ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL:
@@ -370,12 +354,17 @@ namespace Chetch.Arduino2
             TEST_VALUE = 0
         }
 
-        public int TestValue { get; internal set; }
+        public int TestValue 
+        {
+            get { return Get<int>(); }
+            internal set { Set(value, false, false); }
+        }
 
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
             Enabled = false;
+            TestValue = 0;
 
             var enable = ArduinoCommand.Enable(true);
             var disable = ArduinoCommand.Enable(false);
@@ -389,7 +378,6 @@ namespace Chetch.Arduino2
         public override void Serialize(Dictionary<string, object> vals)
         {
             base.Serialize(vals);
-            vals["TestValue"] = TestValue;
         }
 
         public int GetArgumentIndex(ADMMessage message, MessageField field)

@@ -13,7 +13,7 @@ using Chetch.Arduino;
 
 namespace Chetch.Arduino2
 {
-    public class ArduinoDeviceManager
+    public class ArduinoDeviceManager : DataSourceObject
     {
         public const byte ADM_TARGET_ID = 0;
         public const byte ADM_STREAM_TARGET_ID = 255;
@@ -91,7 +91,12 @@ namespace Chetch.Arduino2
 
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
-        public bool Connecting { get; internal set; } = false;
+        public bool Connecting 
+        {
+            get { return Get<bool>(); }
+            internal set { Set(value); }
+        }
+
         public bool IsConnected => _sfc.IsReady; //an alias for the readiness of the connection
         
         private bool _synchronising = false;
@@ -115,19 +120,10 @@ namespace Chetch.Arduino2
             }
         }
 
-        private ADMState _state = ADMState.CREATED;
         public ADMState State
         {
-            get
-            {
-                return _state;
-            }
-            internal set
-            {
-                //TODO: add an event handler here for external code to monitor ADM state changes
-                Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} State =", ID, value);
-                _state = value;
-            }
+            get { return Get<ADMState>(); }
+            internal set { Set(value, value > ADMState.CREATED); }
         }
 
         public ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
@@ -156,20 +152,19 @@ namespace Chetch.Arduino2
             _sfc.EventByteReceived += HandleStreamEventByteReceived;
             _sfc.EventByteSent += HandleStreamEventByteSent;
             _connectTimeout = connectTimeout;
+            State = ADMState.CREATED;
         }
 
-        virtual public void Serialize(Dictionary<String, Object> vals, bool includeDevices = false)
+        override public void Serialize(Dictionary<String, Object> vals)
         {
-            vals["ID"] = ID;
-            vals["LastMessageReceived"] = LastMessageReceived.ToString();
-            vals["DeviceCount"] = _devices.Count;
-            vals["State"] = State.ToString();
-            vals["Connected"] = IsConnected;
+            base.Serialize(vals);
+        }
 
-            if (includeDevices)
-            {
-                //TODO: serialize devices
-            }
+        public override void Deserialize(Dictionary<string, object> source, bool notify = false)
+        {
+            source.Remove("State");
+            source.Remove("Connected");
+            base.Deserialize(source, notify);
         }
 
         private void wait(int sleep, DateTime started = default(DateTime), int timeout = -1, String timeoutMessage = "Timed out!")

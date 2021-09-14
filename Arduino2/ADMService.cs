@@ -96,14 +96,19 @@ namespace Chetch.Arduino2
             }
         }
 
+        protected const int DEFAULT_LOG_STATE_TIMER_INTERVAL = 30 * 1000;
+         
 
         protected ADMServiceDB ServiceDB { get; set; }
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         private List<ADMRequest> _admRequests = new List<ADMRequest>();
 
+        private System.Timers.Timer _logStateTimer;
+        protected int LogStateTimerInterval { get; set; } = DEFAULT_LOG_STATE_TIMER_INTERVAL;
+
         public ADMService(String clientName, String clientManagerSource, String serviceSource, String eventLog) : base(clientName, clientManagerSource, serviceSource, eventLog)
         {
-            //empty
+            //empty 
         }
 
         public override void AddCommandHelp()
@@ -128,12 +133,30 @@ namespace Chetch.Arduino2
             {
                 foreach (var adm in _adms.Values)
                 {
+                    //so we can log property changes
+                    adm.PropertyChanged += HandleADMPropertyChange;
+
                     var devices = adm.GetDevices();
                     foreach (var dev in devices)
                     {
+                        //deserialize
+                        SysInfo si = ServiceDB.GetSysInfo(dev.FullID);
+                        if (si != null)
+                        {
+                            dev.Deserialize(si.DataValue);
+                        }
+
+                        //So we can log property changes
                         dev.PropertyChanged += HandleADMPropertyChange;
                     }
                 }
+
+                if(_logStateTimer == null)
+                {
+                    _logStateTimer = new System.Timers.Timer(LogStateTimerInterval);
+                    _logStateTimer.Elapsed += OnLogStateTimer;
+                }
+                _logStateTimer.Start();
             }
 
             base.OnStart(args);
@@ -141,6 +164,11 @@ namespace Chetch.Arduino2
 
         protected override void OnStop()
         {
+            if (_logStateTimer != null)
+            {
+                _logStateTimer.Start();
+            }
+
             foreach (var adm in _adms.Values)
             {
                 adm.Disconnect();
@@ -170,6 +198,25 @@ namespace Chetch.Arduino2
             base.OnStop();
         }
 
+        virtual protected void OnLogStateTimer(Object sender, EventArgs earg)
+        {
+            foreach (var adm in _adms.Values)
+            {
+                if (!adm.IsReady) continue;
+
+                var devices = adm.GetDevices();
+                foreach (var dev in devices)
+                {
+                    var stateProperties = dev.Properties.Except(dev.Serializable).ToList();
+                    stateProperties.Remove("State"); //oh the irony
+                    foreach(var p in stateProperties)
+                    {
+                        ServiceDB.LogState(dev, p, dev.Get<Object>(p));
+                    }
+                }
+            }
+        }
+
         //loggging
         protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
@@ -181,7 +228,7 @@ namespace Chetch.Arduino2
                     ArduinoDevice device = (ArduinoDevice)sender;
                     String name = dsoArgs.PropertyName;
                     String info = String.Format("{0} changed from {1} to {2}", name, dsoArgs.OldValue, dsoArgs.NewValue);
-                    ServiceDB.LogEvent((ArduinoDevice)sender, dsoArgs.PropertyName, dsoArgs.NewValue, info);
+                    ServiceDB.LogEvent(device, dsoArgs.PropertyName, dsoArgs.NewValue, info);
                 } catch (Exception e)
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
@@ -189,7 +236,17 @@ namespace Chetch.Arduino2
 
             } else if(sender is ArduinoDeviceManager)
             {
-
+                try
+                {
+                    ArduinoDeviceManager adm = (ArduinoDeviceManager)sender;
+                    String name = dsoArgs.PropertyName;
+                    String info = String.Format("{0} changed from {1} to {2}", name, dsoArgs.OldValue, dsoArgs.NewValue);
+                    ServiceDB.LogEvent(adm, dsoArgs.PropertyName, dsoArgs.NewValue, info);
+                }
+                catch (Exception e)
+                {
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
+                }
             }
         }
 

@@ -12,7 +12,7 @@ namespace Chetch.Arduino2
     {
         
         public const String EVENT_LOG_TABLE = "adm_event_log";
-        public const String STATE_LOG_TABLE = "adm_sta_log";
+        public const String STATE_LOG_TABLE = "adm_state_log";
 
         protected  System.Web.Script.Serialization.JavaScriptSerializer JSONSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 
@@ -63,13 +63,12 @@ namespace Chetch.Arduino2
 
         public long LogEvent(ArduinoDevice device, String eventName, Object data, String info = null)
         {
-            var newRow = new DBRow();
-            newRow["event_name"] = eventName;
-            newRow["event_source"] = device.FullID;
-            if (data != null) newRow["event_data"] = data.ToString();
-            if (info != null) newRow["event_info"] = info;
+            return LogEvent(eventName, device.FullID, data, info);
+        }
 
-            return Insert(EVENT_LOG_TABLE, newRow);
+        public long LogEvent(ArduinoDeviceManager adm, String eventName, Object data, String info = null)
+        {
+            return LogEvent(eventName, adm.ID, data, info);
         }
 
 
@@ -99,6 +98,11 @@ namespace Chetch.Arduino2
             if (description != null) newRow["state_description"] = description;
             newRow["state"] = state;
             return Insert(STATE_LOG_TABLE, newRow);
+        }
+
+        public long LogState(ArduinoDevice device, String stateName, Object state, String description = null)
+        {
+            return LogState(device.FullID, stateName, state, description);
         }
 
          
