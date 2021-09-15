@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Configuration;
 using System.Diagnostics;
 using System.ComponentModel;
 using Chetch.Messaging;
@@ -38,7 +39,10 @@ namespace Chetch.Arduino2
                     foreach (ArduinoDeviceManager adm in adms.Values)
                     {
                         Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                        adm.Serialize(vals);
+                        foreach (var p in adm.Properties)
+                        {
+                            vals[p] = adm.Get<Object>(p);
+                        }
                         Message.AddValue("ADM:" + adm.ID, vals);
                     }
                 }
@@ -63,10 +67,22 @@ namespace Chetch.Arduino2
                 AddValuesWithPrefix(ADM_FIELD_NAME_PREFIX, vals);
             }
 
-            public void AddDevice(ArduinoDevice device)
+            public void AddDevice(ArduinoDevice device, bool changedPropertiesOnly = false)
             {
+                if(changedPropertiesOnly && !device.HasChanged)
+                {
+                    throw new Exception("No changed properties ");
+                }
+                var properties = changedPropertiesOnly ? device.ChangedProperties : device.Properties;
                 Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                device.Serialize(vals);
+                foreach(var p in properties)
+                {
+                    vals[p] = device.Get<Object>(p);
+                }
+                vals["ID"] = device.ID;
+                vals["FullID"] = device.FullID;
+                vals["Category"] = device.Category;
+                vals["Name"] = device.Name;
                 AddValuesWithPrefix(DEVICE_FIELD_NAME_PREFIX, vals);
             }
         }
@@ -351,12 +367,14 @@ namespace Chetch.Arduino2
 
             String target = null;
             ADMRequest req2remove = null;
+            Console.WriteLine("Searching for request from {0} with tag {1}", requesterID, messageTag);
             foreach(var req in _admRequests)
             {
                 if(req.RequesterID == requesterID && req.Tag == messageTag)
                 {
                     req2remove = req;
                     target = req.Expired ? null : req.Target;
+                    Console.WriteLine("Found request, expired = {0}", req.Expired);
                     break;
                 }
             }
@@ -420,14 +438,20 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
-                                AddADMRequest(adm, adm.RequestStatus(), response);
+                                byte tag = adm.RequestStatus(true);
+                                Console.WriteLine("Reqest ADM status with tag {0}", tag);
+                                AddADMRequest(adm, tag, response);
                                 break;
 
                             case MessageSchema.COMMAND_PING:
-                                AddADMRequest(adm, adm.Ping(), response);
+                                AddADMRequest(adm, adm.Ping(true), response);
                                 break;
 
                             case MessageSchema.COMMAND_LIST_DEVICES:
+                                break;
+
+                            default:
+                                throw new Exception(String.Format("Unrecognised command: {0}", tgtcmd[1]));
                                 break;
                         }
                     } else
@@ -443,6 +467,7 @@ namespace Chetch.Arduino2
                         switch (deviceCommands[0])
                         {
                             case MessageSchema.COMMAND_STATUS:
+                                AddADMRequest(device, device.RequestStatus(true), response);
                                 break;
 
                             case MessageSchema.COMMAND_LIST_COMMANDS:
@@ -493,29 +518,13 @@ namespace Chetch.Arduino2
                     }
 
                     Message messageToBroadcast = new Message(message.Type);
-                    MessageSchema schema = new MessageSchema(messageToBroadcast);
-                    if (device != null)
-                    {
-                        messageToBroadcast.Sender = device.ID;
-                        messageToBroadcast.Target = GetADMRequestTarget(device, message.Tag);
-                        schema.AddDevice(device);
-                        
-                    } else
-                    {
-                        messageToBroadcast.Sender = adm.ID;
-                        messageToBroadcast.Target = GetADMRequestTarget(adm, message.Tag);
-                        schema.AddADM(adm);   
-                    }
-                    
-
                     bool broadcast = HandleADMMessage(adm, device, message, messageToBroadcast);
 
                     if (broadcast)
                     {
+                        Console.WriteLine("Broadcasting message {0} with target {1}", messageToBroadcast.Type, messageToBroadcast.Target);
                         Broadcast(messageToBroadcast);
                     }
-
-                    //now we
                 } 
             } catch (Exception e)
             {
@@ -526,6 +535,26 @@ namespace Chetch.Arduino2
         virtual protected bool HandleADMMessage(ArduinoDeviceManager adm, ArduinoDevice device, ADMMessage message, Message messageToBroadcast)
         {
             //A hook at present designed to allow the service to cancel broadcast and/or modify the message to be broadcast
+            MessageSchema schema = new MessageSchema(messageToBroadcast);
+            if (device != null)
+            {
+                if (message.Type == MessageType.DATA && !device.HasChanged)
+                {
+                    return false;
+                }
+                else
+                {
+                    messageToBroadcast.Target = GetADMRequestTarget(device, message.Tag);
+                    schema.AddDevice(device, message.Type == MessageType.DATA);
+                }
+                device.ClearChanged();
+            }
+            else
+            {
+                messageToBroadcast.Target = GetADMRequestTarget(adm, message.Tag);
+                schema.AddADM(adm);
+            }
+
             return true;
         }
 

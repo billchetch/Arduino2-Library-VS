@@ -79,18 +79,6 @@ namespace Chetch.Arduino2
             State = DeviceState.CREATED;
         }
 
-        public override void Serialize(Dictionary<string, object> destination)
-        {
-            base.Serialize(destination);
-        }
-
-        public override void Deserialize(Dictionary<string, object> source, bool notify = false)
-        {
-            base.Deserialize(source, notify);
-        }
-
-
-        
         public ADMMessage CreateMessage(MessageType messageType, bool tag = false)
         {
             var message = new ADMMessage();
@@ -139,6 +127,13 @@ namespace Chetch.Arduino2
             ADM.SendMessage(message);
         }
 
+        virtual public byte RequestStatus(bool tag = false)
+        {
+            var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
+            ADM.SendMessage(message);
+            return message.Tag;
+        }
+
         virtual public void HandleMessage(ADMMessage message)
         {
             int argIdx = 0;
@@ -154,6 +149,10 @@ namespace Chetch.Arduino2
                     break;
 
                 case MessageType.STATUS_RESPONSE:
+                    argIdx = GetArgumentIndex(message, MessageField.ENABLED);
+                    Enabled = message.ArgumentAsBool(argIdx);
+                    argIdx = GetArgumentIndex(message, MessageField.REPORT_INTERVAL);
+                    ReportInterval = message.ArgumentAsInt(argIdx);
                     break;
 
                 case MessageType.COMMAND_RESPONSE:
@@ -389,12 +388,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        override public void Configure()
-        {
-            base.Configure();
-
-        }
-
+        
         public override void HandleMessage(ADMMessage message)
         {
             base.HandleMessage(message);
@@ -405,6 +399,7 @@ namespace Chetch.Arduino2
                     argIdx = GetArgumentIndex(message, MessageField.TEST_VALUE);
                     TestValue = message.ArgumentAsInt(argIdx);
                     break;
+
             }
         }
 

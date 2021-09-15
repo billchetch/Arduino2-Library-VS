@@ -651,7 +651,8 @@ namespace Chetch.Arduino2
         public byte RequestStatus(bool tag = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            var message = CreateMessage(MessageType.STATUS_REQUEST);
+            var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
+            Console.WriteLine("Sending status request with tag {0}", tag);
             SendMessage(message);
             return message.Tag;
         }
@@ -659,7 +660,7 @@ namespace Chetch.Arduino2
         public byte Ping(bool tag = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            var message = CreateMessage(MessageType.PING);
+            var message = CreateMessage(MessageType.PING, tag);
             SendMessage(message);
             return message.Tag;
         }
