@@ -367,14 +367,14 @@ namespace Chetch.Arduino2
 
             String target = null;
             ADMRequest req2remove = null;
-            Console.WriteLine("Searching for request from {0} with tag {1}", requesterID, messageTag);
+            //Console.WriteLine("Searching for request from {0} with tag {1}", requesterID, messageTag);
             foreach(var req in _admRequests)
             {
                 if(req.RequesterID == requesterID && req.Tag == messageTag)
                 {
                     req2remove = req;
                     target = req.Expired ? null : req.Target;
-                    Console.WriteLine("Found request, expired = {0}", req.Expired);
+                    //Console.WriteLine("Found request, expired = {0}", req.Expired);
                     break;
                 }
             }
@@ -522,7 +522,10 @@ namespace Chetch.Arduino2
 
                     if (broadcast)
                     {
-                        Console.WriteLine("Broadcasting message {0} with target {1}", messageToBroadcast.Type, messageToBroadcast.Target);
+                        if (messageToBroadcast.Type != MessageType.DATA)
+                        {
+                            Console.WriteLine("Broadcasting message {0} with target {1}", messageToBroadcast.Type, messageToBroadcast.Target);
+                        }
                         Broadcast(messageToBroadcast);
                     }
                 } 

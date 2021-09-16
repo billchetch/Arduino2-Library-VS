@@ -149,6 +149,7 @@ namespace Chetch.Arduino2
             _sfc.CTSTimeout = 1000; //in ms
             _sfc.StreamError += HandleStreamError;
             _sfc.DataBlockReceived += HandleStreamData;
+            _sfc.CommandByteReceived += HandleStreamCommandByteReceived;
             _sfc.EventByteReceived += HandleStreamEventByteReceived;
             _sfc.EventByteSent += HandleStreamEventByteSent;
             _connectTimeout = connectTimeout;
@@ -269,6 +270,23 @@ namespace Chetch.Arduino2
 
                 default:
                     break;
+            }
+        }
+
+        void HandleStreamCommandByteReceived(Object sender, StreamFlowController.CommandByteArgs e)
+        {
+            StreamFlowController sfc = (StreamFlowController)sender;
+            byte b = e.CommandByte;
+            switch (b)
+            {
+                case (byte)StreamFlowController.Command.RESET:
+                    Console.WriteLine("<<<<< REMOTE COMMAND: Reset");
+                    break;
+
+                default:
+                    Console.WriteLine("<<<<< REMOTE COMMAND: {0}", b);
+                    break;
+
             }
         }
 
@@ -399,6 +417,7 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.STATUS_RESPONSE:
+                            Console.WriteLine("Stats response has tag {0}", message.Tag);
                             if (IsDeviceReady)
                             {
                                 int n = message.ArgumentAsInt(GetArgumentIndex(message, MessageField.DEVICE_COUNT));
@@ -652,7 +671,7 @@ namespace Chetch.Arduino2
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
-            Console.WriteLine("Sending status request with tag {0}", tag);
+            Console.WriteLine("Sending status request with tag {0}", message.Tag);
             SendMessage(message);
             return message.Tag;
         }
