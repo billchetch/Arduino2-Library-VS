@@ -364,7 +364,7 @@ namespace Chetch.Arduino2
         public int TestValue 
         {
             get { return Get<int>(); }
-            internal set { Set(value, false); }
+            internal set { Set(value, IsReady); }
         }
 
         public TestDevice01(String id, String name = "TEST01") : base(id, name)

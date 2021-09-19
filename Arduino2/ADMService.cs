@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Configuration;
 using System.Diagnostics;
@@ -21,7 +22,7 @@ namespace Chetch.Arduino2
 
             public const String ADM_FIELD_NAME_PREFIX = "ADM";
             public const String DEVICE_FIELD_NAME_PREFIX = "Device";
-            public const String DEVICE_GROUP_FIELD_NAME_PREFIX = "DGroup";
+            public const String DEVICE_GROUP_FIELD_NAME_PREFIX = "DeviceGroup";
 
             public const String COMMAND_STATUS = "status";
             public const String COMMAND_PING = "ping";
@@ -66,39 +67,55 @@ namespace Chetch.Arduino2
                 }
             }
 
-            protected void AddArduinoeObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
+            protected void AddArduinoObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
             {
-                /*var properties = changedPropertiesOnly ? ao.ChangedProperties : ao.GetPropertyNames();
-
+                List<String> properties = ao.GetPropertyNames(DataSourceObject.PropertyAttribute.IDENTIFIER | DataSourceObject.PropertyAttribute.DESCRIPTOR);
+                if (changedPropertiesOnly) 
+                {
+                    properties.AddRange(ao.ChangedProperties);
+                } 
+                else 
+                {
+                    int atts = ArduinoObject.ArduinoPropertyAttribute.STATE | ArduinoObject.ArduinoPropertyAttribute.DATA;
+                    properties.AddRange(ao.GetPropertyNames(atts));
+                }
 
                 Dictionary<String, Object> vals = new Dictionary<string, Object>();
                 foreach (var p in properties)
                 {
-                    vals[p] = dso.Get<Object>(p);
+                    vals[p] = ao.Get<Object>(p);
                 }
 
-                AddValues(vals, prefix); */
+                AddValues(vals, prefix);
             }
 
             public void AddADM(ArduinoDeviceManager adm)
             {
-                AddArduinoeObject(ADM_FIELD_NAME_PREFIX, adm);
+                AddArduinoObject(ADM_FIELD_NAME_PREFIX, adm);
             }
 
             public void AddDevice(ArduinoDevice device, bool changedPropertiesOnly = false)
             {
-               
+                AddArduinoObject(DEVICE_FIELD_NAME_PREFIX, device, changedPropertiesOnly);
+            }
+
+            public void AddDeviceGroup(ArduinoDeviceGroup deviceGroup, bool changedPropertiesOnly = false)
+            {
+                AddArduinoObject(DEVICE_GROUP_FIELD_NAME_PREFIX, deviceGroup, changedPropertiesOnly);
             }
         }
 
-        protected const int DEFAULT_LOG_STATE_TIMER_INTERVAL = 30 * 1000;
+        protected const int DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL = 30 * 1000;
          
-
         protected ADMServiceDB ServiceDB { get; set; }
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         
         private System.Timers.Timer _logSnapshotTimer;
-        protected int LogSnapshotTimerInterval { get; set; } = DEFAULT_LOG_STATE_TIMER_INTERVAL;
+        protected int LogSnapshotTimerInterval { get; set; } = DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL;
+
+        private Dictionary<String, Message> _messagesToDispatch = new Dictionary<String, Message>();
+        private Object _dispatchMessageLock = new object();
+
 
         public ADMService(String clientName, String clientManagerSource, String serviceSource, String eventLog) : base(clientName, clientManagerSource, serviceSource, eventLog)
         {
@@ -258,23 +275,45 @@ namespace Chetch.Arduino2
 
             if (broadcast)
             {
-                /*var message = new Message(MessageType.DATA);
+                var message = new Message(MessageType.DATA);
                 var schema = new MessageSchema(message);
                 if (sender is ArduinoDevice)
                 {
-                    schema.AddDevice((ArduinoDevice)sender));
+                    schema.AddDevice((ArduinoDevice)sender);
                 }
                 else if (sender is ArduinoDeviceGroup)
                 {
-                    //schema.AddDeviceGroup((ArduinoDeviceGroup)sender));
+                    schema.AddDeviceGroup((ArduinoDeviceGroup)sender);
                 }
                 else if (sender is ArduinoDeviceManager)
                 {
-                    schema.AddADM((ArduinoDeviceManager)sender));
+                    schema.AddADM((ArduinoDeviceManager)sender);
                 }
 
-                Broadcast(message);*/
+                DispatchMessage(ao.UID, message);
             }
+        }
+
+        protected void DispatchMessage(String uid, Message message)
+        {
+            lock (_dispatchMessageLock)
+            {
+                _messagesToDispatch[uid] = message;
+            }
+
+            Task.Run(() =>
+            {
+                lock (_dispatchMessageLock)
+                {
+                    Thread.Sleep(1);
+                    foreach(var msg in _messagesToDispatch.Values)
+                    {
+                        Broadcast(msg);
+                    }
+
+                    _messagesToDispatch.Clear();
+                }
+            });
         }
 
         public override void HandleClientError(Connection cnn, Exception e)
