@@ -12,7 +12,7 @@ namespace Chetch.Arduino2
     {
         
         public const String EVENT_LOG_TABLE = "adm_event_log";
-        public const String STATE_LOG_TABLE = "adm_state_log";
+        public const String SNAPSHOT_LOG_TABLE = "adm_snapshot_log";
 
         protected  System.Web.Script.Serialization.JavaScriptSerializer JSONSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 
@@ -61,17 +61,6 @@ namespace Chetch.Arduino2
             return Insert(EVENT_LOG_TABLE, newRow);
         }
 
-        public long LogEvent(ArduinoDevice device, String eventName, Object data, String info = null)
-        {
-            return LogEvent(eventName, device.FullID, data, info);
-        }
-
-        public long LogEvent(ArduinoDeviceManager adm, String eventName, Object data, String info = null)
-        {
-            return LogEvent(eventName, adm.ID, data, info);
-        }
-
-
         public DBRow GetLatestEvent(String eventName, String source, long limitId = -1)
         {
             return SelectRow("latest-event", "*", eventName, source, limitId.ToString());
@@ -90,19 +79,14 @@ namespace Chetch.Arduino2
             return ce;
         }
 
-        public long LogState(String stateSource, String stateName, Object state, String description = null)
+        public long LogSnapshot(String stateSource, String stateName, Object state, String description = null)
         {
             var newRow = new DBRow();
             newRow["state_source"] = stateSource;
             newRow["state_name"] = stateName;
             if (description != null) newRow["state_description"] = description;
             newRow["state"] = state;
-            return Insert(STATE_LOG_TABLE, newRow);
-        }
-
-        public long LogState(ArduinoDevice device, String stateName, Object state, String description = null)
-        {
-            return LogState(device.FullID, stateName, state, description);
+            return Insert(SNAPSHOT_LOG_TABLE, newRow);
         }
 
          

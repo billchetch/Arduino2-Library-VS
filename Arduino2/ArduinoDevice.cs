@@ -10,7 +10,7 @@ using Chetch.Utilities;
 
 namespace Chetch.Arduino2
 {
-    abstract public class ArduinoDevice : DataSourceObject
+    abstract public class ArduinoDevice : ArduinoObject
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
@@ -23,12 +23,7 @@ namespace Chetch.Arduino2
             CONFIGURED,
         }
 
-        public DeviceState State
-        {
-            get { return Get<DeviceState>(); }
-            internal set { Set(value, value > DeviceState.CREATED, false); }
-        }
-
+        
         public enum MessageField
         {
             ENABLED = 0,
@@ -42,26 +37,38 @@ namespace Chetch.Arduino2
 
         public ArduinoDeviceManager ADM { get; set; }
 
-        public String ID { get; internal set; }
+        
+        [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
+        override public String UID => ADM.ID + ":" + ID;
 
-        public String FullID => ADM.ID + ":" + ID;
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public String Name { get; internal set; }
 
-        public String Name { get; internal set; } 
-
+        [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public byte BoardID { get; internal set; }
 
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DeviceCategory Category { get; internal set; }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, DeviceState.CREATED)]
+        public DeviceState State
+        {
+            get { return Get<DeviceState>(); }
+            internal set { Set(value, value > DeviceState.CREATED); }
+        }
+
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, false)]
         public bool Enabled 
         { 
             get { return Get<bool>(); }
-            internal set { Set(value, IsReady, true); } 
-        } 
+            internal set { Set(value, IsReady); } 
+        }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, -1)]
         public int ReportInterval
         {
             get { return Get<int>(); }
-            set { Set(value, IsReady, true); }
+            set { Set(value, IsReady); }
         }
 
         public bool IsReady => State == DeviceState.CONFIGURED;
@@ -122,7 +129,7 @@ namespace Chetch.Arduino2
         {
             State = DeviceState.CONFIGURING;
             var message = CreateMessage(MessageType.CONFIGURE);
-            message.AddArgument(Enabled ? (byte)1 : (byte)0);
+            message.AddArgument(Enabled);
             message.AddArgument(ReportInterval);
             ADM.SendMessage(message);
         }
@@ -353,18 +360,18 @@ namespace Chetch.Arduino2
             TEST_VALUE = 0
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public int TestValue 
         {
             get { return Get<int>(); }
-            internal set { Set(value, false, false); }
+            internal set { Set(value, false); }
         }
 
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
-            Enabled = false;
-            TestValue = 0;
-
+            Enabled = true;
+            
             var enable = ArduinoCommand.Enable(true);
             var disable = ArduinoCommand.Enable(false);
             var d1 = ArduinoCommand.Delay(1000);

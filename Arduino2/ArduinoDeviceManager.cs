@@ -13,7 +13,7 @@ using Chetch.Arduino;
 
 namespace Chetch.Arduino2
 {
-    public class ArduinoDeviceManager : DataSourceObject
+    public class ArduinoDeviceManager : ArduinoObject
     {
         public const byte ADM_TARGET_ID = 0;
         public const byte ADM_STREAM_TARGET_ID = 255;
@@ -87,10 +87,14 @@ namespace Chetch.Arduino2
         }
 
         public TraceSource Tracing { get; set; } = null;
-        public String ID { get; set; }
+
+        [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
+        override public String UID => ID;
 
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
         public bool Connecting 
         {
             get { return Get<bool>(); }
@@ -120,6 +124,7 @@ namespace Chetch.Arduino2
             }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE)]
         public ADMState State
         {
             get { return Get<ADMState>(); }
@@ -130,9 +135,12 @@ namespace Chetch.Arduino2
 
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
+        private Dictionary<String, ArduinoDeviceGroup> _deviceGroups = new Dictionary<string, ArduinoDeviceGroup>();
+
         public bool IsBoardReady => IsConnected && ((int)State >= (int)ADMState.CONFIGURED);
         public bool IsDeviceReady => IsConnected && (State == ADMState.DEVICE_CONFIGURED);
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE)]
         public bool IsReady => IsEmpty ? IsBoardReady : IsDeviceReady;
 
         public bool IsEmpty => _devices.Count == 0;
@@ -417,7 +425,6 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.STATUS_RESPONSE:
-                            Console.WriteLine("Stats response has tag {0}", message.Tag);
                             if (IsDeviceReady)
                             {
                                 int n = message.ArgumentAsInt(GetArgumentIndex(message, MessageField.DEVICE_COUNT));
@@ -573,11 +580,15 @@ namespace Chetch.Arduino2
         {
             if (State >= ADMState.INITIALISING)
             {
-                throw new Exception(String.Format("Board is in state {0} but devices can only be added once connected and prior to initialising", State));
+                throw new Exception(String.Format("Board is in state {0} but devices can only be added prior to initialising", State));
             }
             if (_devices.ContainsKey(device.ID))
             {
                 throw new Exception(String.Format("Device {0} already added", device.ID));
+            }
+            if (_deviceGroups.ContainsKey(device.ID))
+            {
+                throw new Exception(String.Format("Device {0} cammpt be added as there is already a device group with tha ID", device.ID));
             }
 
             _devices[device.ID] = device;
@@ -604,6 +615,47 @@ namespace Chetch.Arduino2
         public List<ArduinoDevice> GetDevices()
         {
             return _devices.Values.ToList();
+        }
+
+        public ArduinoDeviceGroup AddDeviceGroup(ArduinoDeviceGroup deviceGroup)
+        {
+            if (State >= ADMState.INITIALISING)
+            {
+                throw new Exception(String.Format("Board is in state {0} but device groups can only be added prior to initialising", State));
+            }
+            if (deviceGroup.Devices.Count == 0)
+            {
+                throw new Exception(String.Format("Device group {0} does not have any devices", deviceGroup.ID));
+            }
+            if (_deviceGroups.ContainsKey(deviceGroup.ID))
+            {
+                throw new Exception(String.Format("Device group {0} already added", deviceGroup.ID));
+            }
+            if (_devices.ContainsKey(deviceGroup.ID))
+            {
+                throw new Exception(String.Format("Device group {0} cannot be added as there is already a device with tha ID", deviceGroup.ID));
+            }
+
+            //add the devices of the group 
+            foreach (var dev in deviceGroup.Devices)
+            {
+                AddDevice(dev);
+            }
+
+            //Add the device group and set ADM value
+            _deviceGroups[deviceGroup.ID] = deviceGroup;
+            deviceGroup.ADM = this;
+            return deviceGroup;
+        }
+
+        public ArduinoDeviceGroup GetDeviceGroup(String id)
+        {
+            return _deviceGroups.ContainsKey(id) ? _deviceGroups[id] : null;
+        }
+
+        public List<ArduinoDeviceGroup> GetDeviceGroups()
+        {
+            return _deviceGroups.Values.ToList();
         }
 
         public void Begin(int timeout, bool allowNoDevices = false)
@@ -671,7 +723,6 @@ namespace Chetch.Arduino2
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
             var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
-            Console.WriteLine("Sending status request with tag {0}", message.Tag);
             SendMessage(message);
             return message.Tag;
         }

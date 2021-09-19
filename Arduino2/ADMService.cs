@@ -21,13 +21,17 @@ namespace Chetch.Arduino2
 
             public const String ADM_FIELD_NAME_PREFIX = "ADM";
             public const String DEVICE_FIELD_NAME_PREFIX = "Device";
+            public const String DEVICE_GROUP_FIELD_NAME_PREFIX = "DGroup";
 
             public const String COMMAND_STATUS = "status";
             public const String COMMAND_PING = "ping";
             public const String COMMAND_LIST_DEVICES = "list-devices";
+            public const String COMMAND_LIST_GROUPS = "list-groups";
             public const String COMMAND_LIST_COMMANDS = "list-commands";
             public const String COMMAND_WAIT = "wait";
-            
+            public const String COMMAND_ENABLE = "enable";
+            public const String COMMAND_DISABLE = "disable";
+
             public MessageSchema() { }
 
             public MessageSchema(Message message) : base(message) { }
@@ -38,12 +42,14 @@ namespace Chetch.Arduino2
                 {
                     foreach (ArduinoDeviceManager adm in adms.Values)
                     {
-                        Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                        foreach (var p in adm.Properties)
+                        /*Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                        int options = ArduinoObject.ArduinoPropertyAttribute.IDENTIFIER | ArduinoObject.ArduinoPropertyAttribute.DESCRIPTOR
+                        var properties = adm.GetPropertyNames(options);
+                        foreach (var p in properties)
                         {
                             vals[p] = adm.Get<Object>(p);
                         }
-                        Message.AddValue("ADM:" + adm.ID, vals);
+                        Message.AddValue("ADM:" + adm.ID, vals);*/
                     }
                 }
                 else
@@ -52,63 +58,36 @@ namespace Chetch.Arduino2
                 }
             }
 
-            protected void AddValuesWithPrefix(String prefix, Dictionary<String, Object> vals)
+            protected void AddValues(Dictionary<String, Object> vals, String prefix = null)
             {
                 foreach(KeyValuePair<String, Object> kvp in vals){
-                    String key = prefix + ":" + kvp.Key;
+                    String key = prefix == null ? kvp.Key : prefix + ":" + kvp.Key;
                     Message.AddValue(key, kvp.Value);
                 }
             }
 
+            protected void AddArduinoeObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
+            {
+                /*var properties = changedPropertiesOnly ? ao.ChangedProperties : ao.GetPropertyNames();
+
+
+                Dictionary<String, Object> vals = new Dictionary<string, Object>();
+                foreach (var p in properties)
+                {
+                    vals[p] = dso.Get<Object>(p);
+                }
+
+                AddValues(vals, prefix); */
+            }
+
             public void AddADM(ArduinoDeviceManager adm)
             {
-                Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                adm.Serialize(vals);
-                AddValuesWithPrefix(ADM_FIELD_NAME_PREFIX, vals);
+                AddArduinoeObject(ADM_FIELD_NAME_PREFIX, adm);
             }
 
             public void AddDevice(ArduinoDevice device, bool changedPropertiesOnly = false)
             {
-                if(changedPropertiesOnly && !device.HasChanged)
-                {
-                    throw new Exception("No changed properties ");
-                }
-                var properties = changedPropertiesOnly ? device.ChangedProperties : device.Properties;
-                Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                foreach(var p in properties)
-                {
-                    vals[p] = device.Get<Object>(p);
-                }
-                vals["ID"] = device.ID;
-                vals["FullID"] = device.FullID;
-                vals["Category"] = device.Category;
-                vals["Name"] = device.Name;
-                AddValuesWithPrefix(DEVICE_FIELD_NAME_PREFIX, vals);
-            }
-        }
-
-        class ADMRequest
-        {
-            public String RequesterID;
-            public byte Tag;
-            public String Target;
-            public long Requested;
-            private int _ttl;
-            public ADMRequest(String requesterID, byte tag, String target, int ttl = 60 * 1000)
-            {
-                RequesterID = requesterID;
-                Tag = tag;
-                Target = target;
-                Requested = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                _ttl = ttl;
-            }
-
-            public bool Expired {
-                get
-                {
-                    long nowInMillis = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                    return nowInMillis - Requested > _ttl;
-                }
+               
             }
         }
 
@@ -117,10 +96,9 @@ namespace Chetch.Arduino2
 
         protected ADMServiceDB ServiceDB { get; set; }
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
-        private List<ADMRequest> _admRequests = new List<ADMRequest>();
-
-        private System.Timers.Timer _logStateTimer;
-        protected int LogStateTimerInterval { get; set; } = DEFAULT_LOG_STATE_TIMER_INTERVAL;
+        
+        private System.Timers.Timer _logSnapshotTimer;
+        protected int LogSnapshotTimerInterval { get; set; } = DEFAULT_LOG_STATE_TIMER_INTERVAL;
 
         public ADMService(String clientName, String clientManagerSource, String serviceSource, String eventLog) : base(clientName, clientManagerSource, serviceSource, eventLog)
         {
@@ -138,9 +116,12 @@ namespace Chetch.Arduino2
             AddCommandHelp("adm/<board>:" + MessageSchema.COMMAND_STATUS, "Request board status and add additional information");
             AddCommandHelp("adm/<board>:" + MessageSchema.COMMAND_PING, "Ping board");
             AddCommandHelp("adm/<board>:" + MessageSchema.COMMAND_LIST_DEVICES, "List devices added to ADM");
-            AddCommandHelp("adm/<board>:<device>:" + MessageSchema.COMMAND_WAIT, "Pause for a short while, useful if interspersed with other, comma-seperated, commands");
-            AddCommandHelp("adm/<board>:<device>:" + MessageSchema.COMMAND_LIST_COMMANDS, "List device commands");
-            AddCommandHelp("adm/<board>:<device>:" + MessageSchema.COMMAND_STATUS, "Status of device");
+            AddCommandHelp("adm/<board>:" + MessageSchema.COMMAND_LIST_GROUPS, "List device groups added to ADM");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_WAIT, "Pause for a short while, useful if interspersed with other, comma-seperated, commands");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_LIST_COMMANDS, "List device commands");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_STATUS, "Status of device(s)");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_ENABLE, "Enable device(s)");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_DISABLE, "Disable device(s)");
         }
 
         protected override void OnStart(string[] args)
@@ -149,14 +130,14 @@ namespace Chetch.Arduino2
             {
                 foreach (var adm in _adms.Values)
                 {
-                    //so we can log property changes
+                    //so we can respond to property changes
                     adm.PropertyChanged += HandleADMPropertyChange;
 
                     var devices = adm.GetDevices();
                     foreach (var dev in devices)
                     {
                         //deserialize
-                        SysInfo si = ServiceDB.GetSysInfo(dev.FullID);
+                        SysInfo si = ServiceDB.GetSysInfo(dev.UID);
                         if (si != null)
                         {
                             dev.Deserialize(si.DataValue);
@@ -165,14 +146,28 @@ namespace Chetch.Arduino2
                         //So we can log property changes
                         dev.PropertyChanged += HandleADMPropertyChange;
                     }
+
+                    var deviceGroups = adm.GetDeviceGroups();
+                    foreach (var dg in deviceGroups)
+                    {
+                        //deserialize
+                        SysInfo si = ServiceDB.GetSysInfo(dg.UID);
+                        if (si != null)
+                        {
+                            dg.Deserialize(si.DataValue);
+                        }
+
+                        //So we can log property changes
+                        dg.PropertyChanged += HandleADMPropertyChange;
+                    }
                 }
 
-                if(_logStateTimer == null)
+                if(_logSnapshotTimer == null)
                 {
-                    _logStateTimer = new System.Timers.Timer(LogStateTimerInterval);
-                    _logStateTimer.Elapsed += OnLogStateTimer;
+                    _logSnapshotTimer = new System.Timers.Timer(LogSnapshotTimerInterval);
+                    _logSnapshotTimer.Elapsed += OnLogSnapshotTimer;
                 }
-                _logStateTimer.Start();
+                _logSnapshotTimer.Start();
             }
 
             base.OnStart(args);
@@ -180,9 +175,9 @@ namespace Chetch.Arduino2
 
         protected override void OnStop()
         {
-            if (_logStateTimer != null)
+            if (_logSnapshotTimer != null)
             {
-                _logStateTimer.Start();
+                _logSnapshotTimer.Start();
             }
 
             foreach (var adm in _adms.Values)
@@ -201,7 +196,7 @@ namespace Chetch.Arduino2
                         {
                             Dictionary<String, Object> vals = new Dictionary<String, Object>();
                             dev.Serialize(vals);
-                            SysInfo si = new SysInfo(dev.FullID, vals);
+                            SysInfo si = new SysInfo(dev.UID, vals);
                             ServiceDB.SaveSysInfo(si);
                         } catch (Exception e)
                         {
@@ -214,7 +209,7 @@ namespace Chetch.Arduino2
             base.OnStop();
         }
 
-        virtual protected void OnLogStateTimer(Object sender, EventArgs earg)
+        virtual protected void OnLogSnapshotTimer(Object sender, EventArgs earg)
         {
             foreach (var adm in _adms.Values)
             {
@@ -223,11 +218,10 @@ namespace Chetch.Arduino2
                 var devices = adm.GetDevices();
                 foreach (var dev in devices)
                 {
-                    var stateProperties = dev.Properties.Except(dev.Serializable).ToList();
-                    stateProperties.Remove("State"); //oh the irony
-                    foreach(var p in stateProperties)
+                    var properties = dev.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
+                    foreach(var p in properties)
                     {
-                        ServiceDB.LogState(dev, p, dev.Get<Object>(p));
+                        ServiceDB.LogSnapshot(dev.UID, p, dev.Get<Object>(p));
                     }
                 }
             }
@@ -236,33 +230,50 @@ namespace Chetch.Arduino2
         //loggging
         protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
+            //Get Event data
             DSOPropertyChangedEventArgs dsoArgs = (DSOPropertyChangedEventArgs)eargs;
-            if (sender is ArduinoDevice)
-            {
-                try
-                {
-                    ArduinoDevice device = (ArduinoDevice)sender;
-                    String name = dsoArgs.PropertyName;
-                    String info = String.Format("{0} changed from {1} to {2}", name, dsoArgs.OldValue, dsoArgs.NewValue);
-                    ServiceDB.LogEvent(device, dsoArgs.PropertyName, dsoArgs.NewValue, info);
-                } catch (Exception e)
-                {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
-                }
+            ArduinoObject ao = ((ArduinoObject)sender);
+            ArduinoObject.ArduinoPropertyAttribute propertyAttribute = (ArduinoObject.ArduinoPropertyAttribute)ao.GetPropertyAttribute(dsoArgs.PropertyName);
+            bool broadcast = propertyAttribute.IsState || propertyAttribute.IsData;
 
-            } else if(sender is ArduinoDeviceManager)
+            //First we deal with a state change (i.e. an Event)
+            if (propertyAttribute.IsState)
             {
+                String eventName = dsoArgs.PropertyName;
+                String eventInfo = String.Format("{0} changed from {1} to {2}", eventName, dsoArgs.OldValue, dsoArgs.NewValue);
+                Object eventData = dsoArgs.NewValue;
+                String eventSource = ao.UID;
+
+                //log the event to the db
                 try
                 {
-                    ArduinoDeviceManager adm = (ArduinoDeviceManager)sender;
-                    String name = dsoArgs.PropertyName;
-                    String info = String.Format("{0} changed from {1} to {2}", name, dsoArgs.OldValue, dsoArgs.NewValue);
-                    ServiceDB.LogEvent(adm, dsoArgs.PropertyName, dsoArgs.NewValue, info);
+                    ServiceDB.LogEvent(eventName, eventSource, eventData, eventInfo);
                 }
                 catch (Exception e)
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
                 }
+            }
+
+
+            if (broadcast)
+            {
+                /*var message = new Message(MessageType.DATA);
+                var schema = new MessageSchema(message);
+                if (sender is ArduinoDevice)
+                {
+                    schema.AddDevice((ArduinoDevice)sender));
+                }
+                else if (sender is ArduinoDeviceGroup)
+                {
+                    //schema.AddDeviceGroup((ArduinoDeviceGroup)sender));
+                }
+                else if (sender is ArduinoDeviceManager)
+                {
+                    schema.AddADM((ArduinoDeviceManager)sender));
+                }
+
+                Broadcast(message);*/
             }
         }
 
@@ -306,7 +317,6 @@ namespace Chetch.Arduino2
             if (_adms.ContainsKey(adm.ID)) throw new InvalidOperationException(String.Format("Cannot add ADM with ID {0} as one is alread added", adm.ID)); ;
 
 
-            adm.MessageReceived += TryHandleADMMessage;
             _adms[adm.ID] = adm;
             return adm;
         }
@@ -326,79 +336,12 @@ namespace Chetch.Arduino2
 
 
         //Comms between chetch messaging client and this service
-        protected void AddADMRequest(ArduinoDeviceManager adm, byte messageTag, Message response)
-        {
-            AddADMRequest(adm.ID, messageTag, response.Target);
-        }
-
-        protected void AddADMRequest(ArduinoDevice device, byte messageTag, Message response)
-        {
-            AddADMRequest(device.FullID, messageTag, response.Target);
-        }
-
-        protected void AddADMRequest(String requesterID, byte messageTag, String responseTarget)
-        {
-            if (messageTag == 0)
-            {
-                throw new ArgumentException("ADMRequest: Message tag cannot be 0");
-            }
-
-            //an opportunity to prune
-            List<ADMRequest> expired = new List<ADMRequest>();
-            foreach (var req in _admRequests)
-            {
-                if (req.Expired)
-                {
-                    expired.Add(req);
-                }
-            }
-            foreach(var req in expired)
-            {
-                _admRequests.Remove(req);
-            }
-
-            _admRequests.Add(new ADMRequest(requesterID, messageTag, responseTarget));
-
-        }
-
-        protected String GetADMRequestTarget(String requesterID, byte messageTag)
-        {
-            if (messageTag == 0) return null;
-
-            String target = null;
-            ADMRequest req2remove = null;
-            //Console.WriteLine("Searching for request from {0} with tag {1}", requesterID, messageTag);
-            foreach(var req in _admRequests)
-            {
-                if(req.RequesterID == requesterID && req.Tag == messageTag)
-                {
-                    req2remove = req;
-                    target = req.Expired ? null : req.Target;
-                    //Console.WriteLine("Found request, expired = {0}", req.Expired);
-                    break;
-                }
-            }
-            if (req2remove != null)
-            {
-                _admRequests.Remove(req2remove);
-            }
-            return target;
-        }
-
-        protected String GetADMRequestTarget(ArduinoDeviceManager adm, byte messageTag)
-        {
-            return GetADMRequestTarget(adm.ID, messageTag);
-        }
-
-        protected String GetADMRequestTarget(ArduinoDevice device, byte messageTag)
-        {
-            return GetADMRequestTarget(device.FullID, messageTag);
-        }
-
+        
         /// <summary>
-        /// Incoming command from a client.  This command has two possible destinations: 1) The ADM board, 2) A particular device.
-        /// Once the command is handled formulate a response (i.e. write data to the response message) and return true for the response
-        /// to be sent (false for the response NOT to be sent)
+        /// Incoming command from a client.  This command has three possible destinations: 1) The ADM board, 2) A particular device 3) a
+        /// device group. Once the command is handled formulate a response (i.e. write data to the response message) and return true for the response
+        /// to be sent (false for the response NOT to be sent).  Depending on the command the destination will update in some way which will be caught
+        /// by the property change event handler which in turn may broadcast a message to any service subscribers
         /// </summary>
         /// <param name="cnn"></param>
         /// <param name="message"></param>
@@ -438,13 +381,12 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
-                                byte tag = adm.RequestStatus(true);
-                                Console.WriteLine("Reqest ADM status with tag {0}", tag);
-                                AddADMRequest(adm, tag, response);
+                                adm.RequestStatus();
+                                schema.AddADM(adm);
                                 break;
 
                             case MessageSchema.COMMAND_PING:
-                                AddADMRequest(adm, adm.Ping(true), response);
+                                adm.Ping();
                                 break;
 
                             case MessageSchema.COMMAND_LIST_DEVICES:
@@ -454,112 +396,61 @@ namespace Chetch.Arduino2
                                 throw new Exception(String.Format("Unrecognised command: {0}", tgtcmd[1]));
                                 break;
                         }
-                    } else
+                    }
+                    else
                     {
-                        String deviceID = tgtcmd[1].Trim();
-                        ArduinoDevice device = adm.GetDevice(deviceID);
-                        if(device == null)
+                        String deviceOrGroupID = tgtcmd[1].Trim();
+                        ArduinoDevice device = adm.GetDevice(deviceOrGroupID);
+                        ArduinoDeviceGroup deviceGroup = device == null ? adm.GetDeviceGroup(deviceOrGroupID) : null;
+                        if (device == null && deviceGroup == null)
                         {
-                            throw new Exception(String.Format("Cannot find device {0}", deviceID));
+                            throw new Exception(String.Format("Cannot find device OR device group {0}", deviceOrGroupID));
                         }
-                        List<String> deviceCommands = tgtcmd[2].Split(',').ToList();
-                        //these commands are relaed to the device ... firs are meta commands ... the rest need to be sent to the device
-                        switch (deviceCommands[0])
+                        List<String> commands = tgtcmd[2].Split(',').ToList();
+                        foreach (var cmd in commands)
                         {
-                            case MessageSchema.COMMAND_STATUS:
-                                AddADMRequest(device, device.RequestStatus(true), response);
-                                break;
+                            if (cmd == MessageSchema.COMMAND_WAIT)
+                            {
+                                int delay = cmd.Length > 4 ? System.Convert.ToInt16(cmd.Substring(4, cmd.Length - 4)) : 200;
+                                System.Threading.Thread.Sleep(delay);
+                                continue;
+                            }
 
-                            case MessageSchema.COMMAND_LIST_COMMANDS:
-                                break;
-
-                            default:
-                                foreach(var deviceCommand in deviceCommands)
+                            if (device != null)
+                            {
+                                switch (cmd)
                                 {
-                                    if (deviceCommand == MessageSchema.COMMAND_WAIT)
-                                    {
-                                        int delay = deviceCommand.Length > 4 ? System.Convert.ToInt16(deviceCommand.Substring(4, deviceCommand.Length - 4)) : 200;
-                                        System.Threading.Thread.Sleep(delay);
-                                    }
-                                    else
-                                    {
-                                        byte tag = device.ExecuteCommand(deviceCommand, args);
-                                        AddADMRequest(device, tag, response);
-                                    }
+                                    case MessageSchema.COMMAND_STATUS:
+                                        device.RequestStatus();
+                                        schema.AddDevice(device);
+                                        break;
+
+                                    case MessageSchema.COMMAND_LIST_COMMANDS:
+                                        break;
+
+                                    default:
+                                        device.ExecuteCommand(cmd, args);
+                                        break;
                                 }
-                                break;
-                        }
+                            }
+                            else if (deviceGroup != null)
+                            {
+                                switch (cmd)
+                                {
+                                    case MessageSchema.COMMAND_STATUS:
+                                        deviceGroup.RequestStatus();
+                                        break;
+
+                                    default:
+                                        deviceGroup.ExecuteCommand(cmd, args);
+                                        break;
+                                }
+                            }
+                        } //end loop throgh commands
                     }
                     break;
             }
             return respond;
         }
-
-        //Comms between ADM and this service
-
-        /// <summary>
-        /// This intercepts a message coming from an ADM and sends it to HandleADMMessage for service specific processing.  If the service
-        /// method return true then the message will be braodcast to all subscribers to this service
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args"></param>
-        private void TryHandleADMMessage(Object sender, ArduinoDeviceManager.MessageReceivedArgs args)
-        {
-            try
-            {
-                ADMMessage message = args.Message;
-                if(sender is ArduinoDeviceManager)
-                {
-                    ArduinoDeviceManager adm = (ArduinoDeviceManager)sender;
-                    ArduinoDevice device = null;
-                    if(message.TargetID != ArduinoDeviceManager.ADM_TARGET_ID)
-                    {
-                        device = adm.GetDevice(message.TargetID);
-                    }
-
-                    Message messageToBroadcast = new Message(message.Type);
-                    bool broadcast = HandleADMMessage(adm, device, message, messageToBroadcast);
-
-                    if (broadcast)
-                    {
-                        if (messageToBroadcast.Type != MessageType.DATA)
-                        {
-                            Console.WriteLine("Broadcasting message {0} with target {1}", messageToBroadcast.Type, messageToBroadcast.Target);
-                        }
-                        Broadcast(messageToBroadcast);
-                    }
-                } 
-            } catch (Exception e)
-            {
-                Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
-            }
-        }
-
-        virtual protected bool HandleADMMessage(ArduinoDeviceManager adm, ArduinoDevice device, ADMMessage message, Message messageToBroadcast)
-        {
-            //A hook at present designed to allow the service to cancel broadcast and/or modify the message to be broadcast
-            MessageSchema schema = new MessageSchema(messageToBroadcast);
-            if (device != null)
-            {
-                if (message.Type == MessageType.DATA && !device.HasChanged)
-                {
-                    return false;
-                }
-                else
-                {
-                    messageToBroadcast.Target = GetADMRequestTarget(device, message.Tag);
-                    schema.AddDevice(device, message.Type == MessageType.DATA);
-                }
-                device.ClearChanged();
-            }
-            else
-            {
-                messageToBroadcast.Target = GetADMRequestTarget(adm, message.Tag);
-                schema.AddADM(adm);
-            }
-
-            return true;
-        }
-
     }
 }
