@@ -105,6 +105,7 @@ namespace Chetch.Arduino2
         
         private bool _synchronising = false;
         private bool _synchronised = false;
+
         public bool Synchronising
         {
             get { return _synchronising; }
@@ -140,15 +141,21 @@ namespace Chetch.Arduino2
         public bool IsBoardReady => IsConnected && ((int)State >= (int)ADMState.CONFIGURED);
         public bool IsDeviceReady => IsConnected && (State == ADMState.DEVICE_CONFIGURED);
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE)]
         public bool IsReady => IsEmpty ? IsBoardReady : IsDeviceReady;
 
         public bool IsEmpty => _devices.Count == 0;
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public int DeviceCount => _devices.Count;
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public int DeviceGroupCount => _deviceGroups.Count;
         
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         private System.Timers.Timer _synchroniseTimer;
 
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceived { get; internal set; }
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
@@ -719,20 +726,18 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        public byte RequestStatus(bool tag = false)
+        public void RequestStatus()
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
+            var message = CreateMessage(MessageType.STATUS_REQUEST);
             SendMessage(message);
-            return message.Tag;
         }
 
-        public byte Ping(bool tag = false)
+        public void Ping()
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            var message = CreateMessage(MessageType.PING, tag);
+            var message = CreateMessage(MessageType.PING);
             SendMessage(message);
-            return message.Tag;
         }
 
         public bool Synchronise(int timeout = DEFAULT_SYNCHRONISE_TIMEOUT)

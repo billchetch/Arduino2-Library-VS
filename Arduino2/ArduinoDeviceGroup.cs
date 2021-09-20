@@ -61,26 +61,21 @@ namespace Chetch.Arduino2
             }
         }
 
-        virtual public Dictionary<ArduinoDevice, byte> RequestStatus(bool requireTtag = false)
+        virtual public void RequestStatus()
         {
-            Dictionary<ArduinoDevice, byte> tags = new Dictionary<ArduinoDevice, byte>();
             foreach (var dev in Devices)
             {
-                byte tag = dev.RequestStatus(requireTtag);
-                if (tag > 0) tags[dev] = tag;
+                dev.RequestStatus();
             }
-            return tags;
         }
 
-        virtual public Dictionary<ArduinoDevice, byte> ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
+        virtual public void ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
         {
-            Dictionary<ArduinoDevice, byte> tags = new Dictionary<ArduinoDevice, byte>();
             foreach(var dev in Devices)
             {
-                byte tag = dev.ExecuteCommand(commandAlias, parameters);
-                if (tag > 0) tags[dev] = tag;
+                dev.ExecuteCommand(commandAlias, parameters);
             }
-            return tags;
+            
         }
     }
 }

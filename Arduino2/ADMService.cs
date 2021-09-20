@@ -32,6 +32,7 @@ namespace Chetch.Arduino2
             public const String COMMAND_WAIT = "wait";
             public const String COMMAND_ENABLE = "enable";
             public const String COMMAND_DISABLE = "disable";
+            public const String COMMAND_REPORT_INTERVAL = "report-interval";
 
             public MessageSchema() { }
 
@@ -43,14 +44,14 @@ namespace Chetch.Arduino2
                 {
                     foreach (ArduinoDeviceManager adm in adms.Values)
                     {
-                        /*Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                        int options = ArduinoObject.ArduinoPropertyAttribute.IDENTIFIER | ArduinoObject.ArduinoPropertyAttribute.DESCRIPTOR
+                        Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                        int options = ArduinoObject.ArduinoPropertyAttribute.IDENTIFIER | ArduinoObject.ArduinoPropertyAttribute.DESCRIPTOR | ArduinoObject.ArduinoPropertyAttribute.STATE;
                         var properties = adm.GetPropertyNames(options);
                         foreach (var p in properties)
                         {
                             vals[p] = adm.Get<Object>(p);
                         }
-                        Message.AddValue("ADM:" + adm.ID, vals);*/
+                        Message.AddValue("ADM:" + adm.ID, vals);
                     }
                 }
                 else
@@ -139,43 +140,36 @@ namespace Chetch.Arduino2
             AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_STATUS, "Status of device(s)");
             AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_ENABLE, "Enable device(s)");
             AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_DISABLE, "Disable device(s)");
+            AddCommandHelp("adm/<board>:<device/group>:" + MessageSchema.COMMAND_REPORT_INTERVAL, "Set device report interval");
+        }
+
+        protected List<ArduinoObject> GetArduinoObjects()
+        {
+            List<ArduinoObject> aos = new List<ArduinoObject>();
+            foreach (var adm in _adms.Values)
+            {
+                aos.Add(adm);
+                aos.AddRange(adm.GetDevices());
+                aos.AddRange(adm.GetDeviceGroups());
+            }
+            return aos;
         }
 
         protected override void OnStart(string[] args)
         {
             if (ServiceDB != null)
             {
-                foreach (var adm in _adms.Values)
+                List<ArduinoObject> aoToInitialise = GetArduinoObjects();
+                foreach (var ao in aoToInitialise)
                 {
-                    //so we can respond to property changes
-                    adm.PropertyChanged += HandleADMPropertyChange;
+                    //Add handler so we can respond to property changes
+                    ao.PropertyChanged += HandleADMPropertyChange;
 
-                    var devices = adm.GetDevices();
-                    foreach (var dev in devices)
+                    //deserialize if there is 
+                    SysInfo si = ServiceDB.GetSysInfo(ao.UID);
+                    if (si != null)
                     {
-                        //deserialize
-                        SysInfo si = ServiceDB.GetSysInfo(dev.UID);
-                        if (si != null)
-                        {
-                            dev.Deserialize(si.DataValue);
-                        }
-
-                        //So we can log property changes
-                        dev.PropertyChanged += HandleADMPropertyChange;
-                    }
-
-                    var deviceGroups = adm.GetDeviceGroups();
-                    foreach (var dg in deviceGroups)
-                    {
-                        //deserialize
-                        SysInfo si = ServiceDB.GetSysInfo(dg.UID);
-                        if (si != null)
-                        {
-                            dg.Deserialize(si.DataValue);
-                        }
-
-                        //So we can log property changes
-                        dg.PropertyChanged += HandleADMPropertyChange;
+                        ao.Deserialize(si.DataValue);
                     }
                 }
 
@@ -194,7 +188,7 @@ namespace Chetch.Arduino2
         {
             if (_logSnapshotTimer != null)
             {
-                _logSnapshotTimer.Start();
+                _logSnapshotTimer.Stop();
             }
 
             foreach (var adm in _adms.Values)
@@ -204,21 +198,27 @@ namespace Chetch.Arduino2
 
             if(ServiceDB != null)
             {
-                foreach (var adm in _adms.Values)
+                List<ArduinoObject> aoToSerialize = GetArduinoObjects();
+                
+                foreach(var ao in aoToSerialize)
                 {
-                    var devices = adm.GetDevices();
-                    foreach (var dev in devices)
+                    //Remove property change handler
+                    ao.PropertyChanged -= HandleADMPropertyChange;
+
+                    //serialize if required
+                    try
                     {
-                        try
+                        Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                        ao.Serialize(vals);
+                        if (vals.Count > 0)
                         {
-                            Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                            dev.Serialize(vals);
-                            SysInfo si = new SysInfo(dev.UID, vals);
+                            SysInfo si = new SysInfo(ao.UID, vals);
                             ServiceDB.SaveSysInfo(si);
-                        } catch (Exception e)
-                        {
-                            Tracing?.TraceEvent(TraceEventType.Error, 0, "Error saving device to DB: {1}", e.Message);
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        Tracing?.TraceEvent(TraceEventType.Error, 0, "Error serializing {0} to DB: {1}", ao.UID, e.Message);
                     }
                 }
             }
@@ -232,13 +232,13 @@ namespace Chetch.Arduino2
             {
                 if (!adm.IsReady) continue;
 
-                var devices = adm.GetDevices();
-                foreach (var dev in devices)
+                List<ArduinoObject> aoToSnapshot = GetArduinoObjects();
+                foreach (var ao in aoToSnapshot)
                 {
-                    var properties = dev.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
+                    var properties = ao.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
                     foreach(var p in properties)
                     {
-                        ServiceDB.LogSnapshot(dev.UID, p, dev.Get<Object>(p));
+                        ServiceDB.LogSnapshot(ao.UID, p, ao.Get<Object>(p));
                     }
                 }
             }

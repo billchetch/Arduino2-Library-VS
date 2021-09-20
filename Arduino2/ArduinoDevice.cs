@@ -134,11 +134,10 @@ namespace Chetch.Arduino2
             ADM.SendMessage(message);
         }
 
-        virtual public byte RequestStatus(bool tag = false)
+        virtual public void RequestStatus()
         {
-            var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
+            var message = CreateMessage(MessageType.STATUS_REQUEST);
             ADM.SendMessage(message);
-            return message.Tag;
         }
 
         virtual public void HandleMessage(ADMMessage message)
@@ -206,7 +205,7 @@ namespace Chetch.Arduino2
         }
 
         private Task _executeCommandTask = null;
-        public byte ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
+        public void ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
         {
             if (!IsReady)
             {
@@ -219,7 +218,7 @@ namespace Chetch.Arduino2
             }
 
             int ttl = System.Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
-            Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
+            //Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
             byte tag = MessageTags.CreateTagSet(ttl);
             Action action = () =>
             {
@@ -235,17 +234,16 @@ namespace Chetch.Arduino2
             {
                 _executeCommandTask = _executeCommandTask.ContinueWith(antecedent => action());
             }
-            return tag;
         }
 
-        public byte ExecuteCommand(String commandAlias, params ValueType[] parameters)
+        public void ExecuteCommand(String commandAlias, params ValueType[] parameters)
         {
-            return ExecuteCommand(commandAlias, parameters.ToList());
+            ExecuteCommand(commandAlias, parameters.ToList());
         }
 
-        public byte ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params ValueType[] parameters)
+        public void ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params ValueType[] parameters)
         {
-            return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
+            ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
         protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<ValueType> parameters = null)
@@ -273,7 +271,6 @@ namespace Chetch.Arduino2
                         {
                             throw new Exception("DeviceCommand is NONE but ths is not a delay");
                         }
-
 
                         List<ValueType> allParams = new List<ValueType>();
                         if (cmd.Parameters != null) allParams.AddRange(cmd.Parameters);
