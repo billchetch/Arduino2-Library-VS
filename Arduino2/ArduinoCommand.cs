@@ -8,6 +8,7 @@ namespace Chetch.Arduino2
 {
     public class ArduinoCommand
     {
+
         public static ArduinoCommand Delay(int delay)
         {
             return new ArduinoCommand(delay);
@@ -34,11 +35,34 @@ namespace Chetch.Arduino2
             RESET,
         }
 
+        public enum ParameterType
+        {
+            STRING,
+            BOOL,
+            INT,
+            BYTE,
+            FLOAT,
+        }
+
         public DeviceCommand Command { get; internal set; }
 
-        public String Alias { get; internal set; }
+        private String _alias;
+        public String Alias
+        {
+            get { return _alias; }
+            internal set
+            {
+                if (String.IsNullOrEmpty(value))
+                {
+                    throw new ArgumentException("Alias cannot be null or empty");
+                }
+                _alias = value.ToLower().Trim().Replace('_', '-');
+            }
+        }
 
-        public List<ValueType> Parameters { get; internal set; } = new List<ValueType>();
+        public List<Object> Parameters { get; internal set; } = new List<Object>();
+
+        public List<ParameterType> ParameterTypes { get;  internal set; } = new List<ParameterType>();
 
         public int DelayInterval { get; internal set; } = 0;
 
@@ -62,36 +86,125 @@ namespace Chetch.Arduino2
 
         public int TotalDelayInterval { get; internal set; } = 0;
 
-        public ArduinoCommand(DeviceCommand command, String alias = null)
+        public ArduinoCommand(DeviceCommand command, String alias = null, List<ParameterType> parameterTypes  = null)
         {
             Command = command;
-            Alias = alias == null ? command.ToString().ToLower() : alias.Trim().ToLower();
+            Alias = alias == null ? command.ToString() : alias;
+            ParameterTypes = parameterTypes;
         }
 
-        public ArduinoCommand(DeviceCommand command, ValueType parameter, String alias = null)
-        {
-            Command = command;
-            Alias = alias == null ? command.ToString().ToLower() : alias.Trim().ToLower();
-            AddParameter(parameter);
-        }
         ArduinoCommand(int delay) : this(DeviceCommand.NONE)
         {
             DelayInterval = delay;
             Alias = "delay";
         }
 
-        public void AddParameter(ValueType parameter)
+        public bool IsParamaterType(Object parameter, ParameterType parameterType)
         {
-            if (IsDelay) throw new InvalidOperationException("Cannot add parameter to a delay command");
-            Parameters.Add(parameter);
-            UpdateTotals();
+            switch (parameterType)
+            {
+                case ParameterType.STRING:
+                    return parameter is String;
+                
+            }
+            return false;
         }
 
-        public void AddParameters(params ValueType[] parameters)
+        public void AddParameter(Object parameter)
+        {
+            if (IsDelay) throw new InvalidOperationException("Cannot add parameter to a delay command");
+            int idx = Parameters.Count;
+            if(idx >= ParameterTypes.Count)
+            {
+                throw new Exception(String.Format("Cannot add parameter at position {0} because no parameter type has been specified", idx));
+            }
+            if (IsParamaterType(parameter, ParameterTypes[idx]))
+            {
+                Parameters.Add(parameter);
+                UpdateTotals();
+            } else
+            {
+                throw new ArgumentException(String.Format("Parameter is notof type{0}", ParameterTypes[idx]));
+            }
+        }
+
+        public void AddParameters(params Object[] parameters)
         {
             foreach(var p in parameters)
             {
                 AddParameter(p);
+            }
+        }
+
+        public T Convert<T>(Object v)
+        {
+            return (T)v;
+        }
+
+        public void ValidateParameters(List<Object> parameters)
+        {
+            if(parameters.Count > ParameterTypes.Count)
+            {
+                throw new Exception("Too many parameters!");
+            }
+
+            for(int i = 0; i < parameters.Count; i++)
+            {
+                Object paramValue = parameters[i];
+                ParameterType paramType = ParameterTypes[i];
+                bool valid = false;
+                switch (paramType)
+                {
+                    case ParameterType.STRING:
+                        valid = (paramValue is String);
+                        break;
+
+                    case ParameterType.BOOL:
+                        parameters[i] = Chetch.Utilities.Convert.ToBoolean(paramValue);
+                        valid = true;
+                        break;
+
+                    case ParameterType.INT:
+                        if(paramValue is int)
+                        {
+                            valid = true;
+                        }
+                        else
+                        {
+                            parameters[i] = int.Parse(paramValue.ToString());
+                            valid = true;
+                        }
+                        break;
+
+                    case ParameterType.BYTE:
+                        if (paramValue is byte)
+                        {
+                            valid = true;
+                        }
+                        else
+                        {
+                            parameters[i] = byte.Parse(paramValue.ToString());
+                            valid = true;
+                        }
+                        break;
+
+                    case ParameterType.FLOAT:
+                        if (paramValue is float || paramValue is double)
+                        {
+                            valid = true;
+                        }
+                        else
+                        {
+                            parameters[i] = float.Parse(paramValue.ToString());
+                            valid = true;
+                        }
+                        break;
+
+                }
+                if (!valid)
+                {
+                    throw new Exception(String.Format("Paramter at position {0} is not of type", i, paramType));
+                }
             }
         }
 

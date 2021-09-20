@@ -80,8 +80,9 @@ namespace Chetch.Arduino2
             ID = id;
             Name = name.ToUpper();
 
-            AddCommand(ArduinoCommand.DeviceCommand.ENABLE);
-            AddCommand(ArduinoCommand.DeviceCommand.DISABLE);
+            AddCommand(ArduinoCommand.DeviceCommand.ENABLE, ArduinoCommand.ParameterType.BOOL);
+            AddCommand(ArduinoCommand.DeviceCommand.DISABLE, ArduinoCommand.ParameterType.BOOL);
+            AddCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, ArduinoCommand.ParameterType.INT);
 
             State = DeviceState.CREATED;
         }
@@ -185,17 +186,16 @@ namespace Chetch.Arduino2
             return cmd;
         }
 
-        public ArduinoCommand AddCommand(ArduinoCommand.DeviceCommand deviceCommand, String alias, params ValueType[] parameters)
+        public ArduinoCommand AddCommand(ArduinoCommand.DeviceCommand deviceCommand, String alias,  params ArduinoCommand.ParameterType[] parameterTypes)
         {
-            ArduinoCommand cmd = new ArduinoCommand(deviceCommand, alias);
-            if (parameters != null) cmd.AddParameters(parameters);
+            ArduinoCommand cmd = new ArduinoCommand(deviceCommand, alias, parameterTypes?.ToList());
             return AddCommand(cmd);
 
         }
 
-        public ArduinoCommand AddCommand(ArduinoCommand.DeviceCommand deviceCommand)
+        public ArduinoCommand AddCommand(ArduinoCommand.DeviceCommand deviceCommand, params ArduinoCommand.ParameterType[] parameterTypes)
         {
-            return AddCommand(deviceCommand, deviceCommand.ToString());
+            return AddCommand(deviceCommand, deviceCommand.ToString(), parameterTypes);
         }
 
         protected ArduinoCommand GetCommand(String alias)
@@ -205,7 +205,7 @@ namespace Chetch.Arduino2
         }
 
         private Task _executeCommandTask = null;
-        public void ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
+        public void ExecuteCommand(String commandAlias, List<Object> parameters = null)
         {
             if (!IsReady)
             {
@@ -222,7 +222,13 @@ namespace Chetch.Arduino2
             byte tag = MessageTags.CreateTagSet(ttl);
             Action action = () =>
             {
-                ExecuteCommand(cmd, tag, parameters);
+                try
+                {
+                    ExecuteCommand(cmd, tag, parameters);
+                } catch  (Exception e)
+                {
+                    Error = e.Message;
+                }
             };
             
             if (_executeCommandTask == null || _executeCommandTask.IsCompleted)
@@ -236,17 +242,17 @@ namespace Chetch.Arduino2
             }
         }
 
-        public void ExecuteCommand(String commandAlias, params ValueType[] parameters)
+        public void ExecuteCommand(String commandAlias, params Object[] parameters)
         {
             ExecuteCommand(commandAlias, parameters.ToList());
         }
 
-        public void ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params ValueType[] parameters)
+        public void ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params Object[] parameters)
         {
             ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
-        protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<ValueType> parameters = null)
+        protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<Object> parameters = null)
         {
             for (int i = 0; i < cmd.Repeat; i++)
             {
@@ -272,9 +278,10 @@ namespace Chetch.Arduino2
                             throw new Exception("DeviceCommand is NONE but ths is not a delay");
                         }
 
-                        List<ValueType> allParams = new List<ValueType>();
+                        List<Object> allParams = new List<Object>();
                         if (cmd.Parameters != null) allParams.AddRange(cmd.Parameters);
                         if (parameters != null) allParams.AddRange(parameters);
+                        cmd.ValidateParameters(allParams);
                         if (HandleCommand(cmd, allParams))
                         {
                             //assume the command is a message
@@ -294,7 +301,7 @@ namespace Chetch.Arduino2
         }
 
         //Called before sending command (for instance to update state) return value determines whether command is executed.
-        virtual protected bool HandleCommand(ArduinoCommand cmd, List<ValueType> parameters)
+        virtual protected bool HandleCommand(ArduinoCommand cmd, List<Object> parameters)
         {
             switch (cmd.Command)
             {

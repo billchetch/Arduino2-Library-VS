@@ -69,7 +69,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        virtual public void ExecuteCommand(String commandAlias, List<ValueType> parameters = null)
+        virtual public void ExecuteCommand(String commandAlias, List<Object> parameters = null)
         {
             foreach(var dev in Devices)
             {

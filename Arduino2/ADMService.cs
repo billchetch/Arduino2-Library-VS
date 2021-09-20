@@ -77,7 +77,7 @@ namespace Chetch.Arduino2
                 } 
                 else 
                 {
-                    int atts = ArduinoObject.ArduinoPropertyAttribute.STATE | ArduinoObject.ArduinoPropertyAttribute.DATA;
+                    int atts = ArduinoObject.ArduinoPropertyAttribute.STATE | ArduinoObject.ArduinoPropertyAttribute.DATA | DataSourceObject.PropertyAttribute.ERROR;
                     properties.AddRange(ao.GetPropertyNames(atts));
                 }
 
@@ -251,10 +251,9 @@ namespace Chetch.Arduino2
             DSOPropertyChangedEventArgs dsoArgs = (DSOPropertyChangedEventArgs)eargs;
             ArduinoObject ao = ((ArduinoObject)sender);
             ArduinoObject.ArduinoPropertyAttribute propertyAttribute = (ArduinoObject.ArduinoPropertyAttribute)ao.GetPropertyAttribute(dsoArgs.PropertyName);
-            bool broadcast = propertyAttribute.IsState || propertyAttribute.IsData;
-
+            
             //First we deal with a state change (i.e. an Event)
-            if (propertyAttribute.IsState)
+            if (propertyAttribute.IsState || propertyAttribute.IsError)
             {
                 String eventName = dsoArgs.PropertyName;
                 String eventInfo = String.Format("{0} changed from {1} to {2}", eventName, dsoArgs.OldValue, dsoArgs.NewValue);
@@ -272,10 +271,10 @@ namespace Chetch.Arduino2
                 }
             }
 
-
-            if (broadcast)
+            //now we dispatch a message to any subscribers to the service
+            if (propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsError)
             {
-                var message = new Message(MessageType.DATA);
+                var message = new Message(propertyAttribute.IsError ? MessageType.ERROR : MessageType.DATA);
                 var schema = new MessageSchema(message);
                 if (sender is ArduinoDevice)
                 {
@@ -388,7 +387,7 @@ namespace Chetch.Arduino2
         /// <param name="args"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        public override bool HandleCommand(Connection cnn, Message message, string command, List<ValueType> args, Message response)
+        public override bool HandleCommand(Connection cnn, Message message, string command, List<Object> args, Message response)
         {
             bool respond = true;
             MessageSchema schema = new MessageSchema(response);
@@ -490,6 +489,23 @@ namespace Chetch.Arduino2
                     break;
             }
             return respond;
+        }
+    
+        /// <summary>
+        /// Sends a command in the correct format based on command line input
+        /// </summary>
+        /// <param name="cnn"></param>
+        /// <param name="commandLine"></param>
+        static public void FormatAndSendCommand(ClientConnection cnn, String target, String commandLine)
+        {
+            String[] parts = commandLine.Split(' ');
+            String command = parts[0];
+            List<Object> args = new List<object>();
+            for(int i = 1; i < parts.Length; i++)
+            {
+                args.Add(parts[i]);
+            }
+            cnn.SendCommand(target, command, args.Count == 0 ? null : args);
         }
     }
 }
