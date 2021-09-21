@@ -12,8 +12,8 @@ namespace Chetch.Arduino2
         [AttributeUsage(AttributeTargets.Property)]
         public class ArduinoPropertyAttribute : DataSourceObject.PropertyAttribute
         {
-            public const int STATE = 16;
-            public const int DATA = 32;
+            public const int STATE = 64;
+            public const int DATA = 128;
             
             public bool IsState => HasAttribute(STATE);
             public bool IsData => HasAttribute(DATA);

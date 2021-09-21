@@ -17,6 +17,7 @@ namespace Chetch.Arduino2
         public static ArduinoCommand Enable(bool enable)
         {
             var cmd = new ArduinoCommand(DeviceCommand.ENABLE);
+            cmd.AddParameterType(ParameterType.BOOL);
             cmd.AddParameter(enable);
             return cmd;
         }
@@ -90,7 +91,7 @@ namespace Chetch.Arduino2
         {
             Command = command;
             Alias = alias == null ? command.ToString() : alias;
-            ParameterTypes = parameterTypes;
+            if(parameterTypes != null)AddParameterTypes(parameterTypes);
         }
 
         ArduinoCommand(int delay) : this(DeviceCommand.NONE)
@@ -99,15 +100,17 @@ namespace Chetch.Arduino2
             Alias = "delay";
         }
 
-        public bool IsParamaterType(Object parameter, ParameterType parameterType)
+        public void AddParameterType(ParameterType parameterType)
         {
-            switch (parameterType)
+            ParameterTypes.Add(parameterType);
+        }
+
+        public void AddParameterTypes(List<ParameterType> parameterTypes)
+        {
+            foreach (var parameterType in parameterTypes)
             {
-                case ParameterType.STRING:
-                    return parameter is String;
-                
+                ParameterTypes.Add(parameterType);
             }
-            return false;
         }
 
         public void AddParameter(Object parameter)
@@ -118,13 +121,16 @@ namespace Chetch.Arduino2
             {
                 throw new Exception(String.Format("Cannot add parameter at position {0} because no parameter type has been specified", idx));
             }
-            if (IsParamaterType(parameter, ParameterTypes[idx]))
+
+            Parameters.Add(parameter);
+            try
             {
-                Parameters.Add(parameter);
+                ValidateParameters(Parameters); //this will also normalise the parameter values
                 UpdateTotals();
-            } else
+            } catch (Exception e)
             {
-                throw new ArgumentException(String.Format("Parameter is notof type{0}", ParameterTypes[idx]));
+                Parameters.RemoveAt(Parameters.Count - 1);
+                throw e;
             }
         }
 
@@ -136,16 +142,11 @@ namespace Chetch.Arduino2
             }
         }
 
-        public T Convert<T>(Object v)
-        {
-            return (T)v;
-        }
-
         public void ValidateParameters(List<Object> parameters)
         {
             if(parameters.Count > ParameterTypes.Count)
             {
-                throw new Exception("Too many parameters!");
+                throw new Exception(String.Format("Canno validate parameters as there are too many. Command {0} specifies {1} parameter types but {2} parameters passed", Alias, ParameterTypes.Count, parameters.Count ));
             }
 
             for(int i = 0; i < parameters.Count; i++)
