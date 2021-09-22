@@ -77,5 +77,10 @@ namespace Chetch.Arduino2
             }
             
         }
+
+        protected override int GetArgumentIndex(string fieldName, ADMMessage message)
+        {
+            return 0;
+        }
     }
 }

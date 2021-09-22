@@ -50,14 +50,6 @@ namespace Chetch.Arduino2
             DEVICE_CONFIGURED,
         }
 
-        public enum MessageField
-        {
-            MILLIS = 0,
-            MEMORY,
-            DEVICE_COUNT,
-            IS_READY,
-        }
-
         public class MessageReceivedArgs : EventArgs
         {
             public ADMMessage Message { get; internal set; }
@@ -132,8 +124,6 @@ namespace Chetch.Arduino2
             internal set { Set(value, value > ADMState.CREATED); }
         }
 
-        public ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
-
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
         private Dictionary<String, ArduinoDeviceGroup> _deviceGroups = new Dictionary<string, ArduinoDeviceGroup>();
@@ -157,6 +147,12 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceived { get; internal set; }
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR, 0)]
+        public long BoardMillis { get; internal set; }
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR, 0)]
+        public int BoardMemory { get; internal set; }
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -388,18 +384,16 @@ namespace Chetch.Arduino2
             {
                 f.Add(e.DataBlock);
                 f.Validate();
-                //TODO: pointless bytes to string to message conversion ...!!!
-                String s = Chetch.Utilities.Convert.ToString(f.Payload);
-                message = ADMMessage.Deserialize<ADMMessage>(s, MessageEncoding.BYTES_ARRAY);
+                message = ADMMessage.Deserialize(f.Payload);
                 LastMessageReceived = DateTime.Now;
-                if (message.TargetID == ADM_TARGET_ID)
+                if (message.Target == ADM_TARGET_ID)
                 {
                     //Board
                     switch (message.Type)
                     {
                         case MessageType.ERROR:
                             Console.WriteLine("---------------------------");
-                            Console.WriteLine("ADM ERROR: {0}", message.ArgumentAsInt(0));
+                            Console.WriteLine("ADM ERROR: {0}", GetMessageValue<int>("Error", message));
                             //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
                             Console.WriteLine("---------------------------");
                             break;
@@ -432,9 +426,10 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.STATUS_RESPONSE:
+                            AssignMessageValues(message, "BoardMillis", "BoardMemory");
                             if (IsDeviceReady)
                             {
-                                int n = message.ArgumentAsInt(GetArgumentIndex(message, MessageField.DEVICE_COUNT));
+                                int n = GetMessageValue<int>("DeviceCount", message);
                                 if(n != _devices.Count)
                                 {
                                     if (Synchronising)
@@ -456,22 +451,19 @@ namespace Chetch.Arduino2
                     }
 
                     //release message tags used by the board
-                    if (message.Tag > 0)
-                    {
-                        message.Tag = MessageTags.Release(message.Tag);
-                    }
+                    base.HandleMessage(message);
                 }
-                else if (message.TargetID == ADM_STREAM_TARGET_ID)
+                else if (message.Target == ADM_STREAM_TARGET_ID)
                 {
                     //Stream flow controller
                 }
                 else if (IsBoardReady)
                 {
                     //devices
-                    ArduinoDevice dev = GetDevice(message.TargetID);
+                    ArduinoDevice dev = GetDevice(message.Target);
                     if(dev == null)
                     {
-                        throw new Exception(String.Format("Device {0} not found", message.TargetID));
+                        throw new Exception(String.Format("Device {0} not found", message.Target));
                     }
                     //message tags will be released by the device as each device manages its own tags
                     dev.HandleMessage(message);
@@ -534,8 +526,8 @@ namespace Chetch.Arduino2
             {
                 message.Tag = MessageTags.CreateTag();
             }
-            message.TargetID = ADM_TARGET_ID;
-            message.SenderID = ADM_TARGET_ID;
+            message.Target = ADM_TARGET_ID;
+            message.Sender = ADM_TARGET_ID;
             return message;
         }
 
@@ -547,23 +539,39 @@ namespace Chetch.Arduino2
             }
 
             Frame messageFrame = new Frame(Frame.FrameSchema.SMALL_SIMPLE_CHECKSUM, MessageEncoding.BYTES_ARRAY);
-            List<byte> bts2send = new List<byte>();
-            message.AddBytes(bts2send);
-            if (bts2send.Count > ADM_MESSAGE_SIZE)
+            byte[] payload = message.Serialize();
+            if (payload.Length > ADM_MESSAGE_SIZE)
             {
-                throw new Exception(String.Format("Message is of length {0} it must be less than {1}", bts2send.Count, ADM_MESSAGE_SIZE));
+                throw new Exception(String.Format("Message is of length {0} it must be less than {1}", payload.Length, ADM_MESSAGE_SIZE));
             }
 
-            messageFrame.Payload = bts2send.ToArray();
+            messageFrame.Payload = payload;
             _sfc.Send(messageFrame.GetBytes());
         }
 
-        public int GetArgumentIndex(ADMMessage message, MessageField field)
+        override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
-            switch (field)
+            /*
+             * public enum MessageField
+        {
+            MILLIS = 0,
+            MEMORY,
+            DEVICE_COUNT,
+            IS_READY,
+        }*/
+            switch (fieldName)
             {
+                case "BoardMillis":
+                    return 0;
+                case "BoardMemory":
+                    return 1;
+                case "DeviceCount":
+                    return 2;
+                case "Error":
+                    return 0;
+                
                 default:
-                    return (int)field;
+                    throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
             }
         }
 

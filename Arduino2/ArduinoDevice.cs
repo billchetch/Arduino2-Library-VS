@@ -14,6 +14,20 @@ namespace Chetch.Arduino2
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
+        public enum DeviceCategory
+        {
+            NOT_SET,
+            DIAGNOSTICS = 1,
+            IR_TRANSMITTER = 2,
+            IR_RECEIVER = 3,
+            TEMPERATURE_SENSOR = 4,
+            COUNTER = 5,
+            RANGE_FINDER = 6,
+            ALARM = 7,
+            VAC_SENSOR = 8,
+            SWITCH = 9,
+        }
+
         public enum DeviceState
         {
             CREATED = 1,
@@ -23,21 +37,9 @@ namespace Chetch.Arduino2
             CONFIGURED,
         }
 
-        
-        public enum MessageField
-        {
-            ENABLED = 0,
-            REPORT_INTERVAL,
-            DEVICE_NAME,
-            CATEGORY,
-            DEVICE_COMMAND,
-        }
-
-        protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
-
         public ArduinoDeviceManager ADM { get; set; }
 
-        
+
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         override public String UID => ADM.ID + ":" + ID;
 
@@ -58,10 +60,10 @@ namespace Chetch.Arduino2
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, false)]
-        public bool Enabled 
-        { 
+        public bool Enabled
+        {
             get { return Get<bool>(); }
-            internal set { Set(value, IsReady); } 
+            internal set { Set(value, IsReady); }
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, -1)]
@@ -87,12 +89,12 @@ namespace Chetch.Arduino2
             State = DeviceState.CREATED;
         }
 
-        public ADMMessage CreateMessage(MessageType messageType, bool tag = false)
+        protected ADMMessage CreateMessage(MessageType messageType, bool tag = false)
         {
             var message = new ADMMessage();
             message.Type = messageType;
-            message.TargetID = BoardID;
-            message.SenderID = BoardID;
+            message.Target = BoardID;
+            message.Sender = BoardID;
             if (tag)
             {
                 message.Tag = MessageTags.CreateTag();
@@ -101,49 +103,66 @@ namespace Chetch.Arduino2
             return message;
         }
 
-        public int GetArgumentIndex(ADMMessage message, MessageField field)
+
+        override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
-            switch (field)
+            switch (fieldName)
             {
-                case MessageField.DEVICE_COMMAND:
+                case "DeviceCommand":
                     return 0;
 
-                case MessageField.ENABLED:
-                case MessageField.REPORT_INTERVAL:
-                    return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : (int)field;
-                   
+                case "Enabled":
+                    return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : 0;
+
+                case "ReportInterval":
+                    return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : 1;
+
                 default:
-                    return (int)field;
+                    throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
             }
         }
 
-        virtual public void Initialise()
+        virtual public void SendMessage(ADMMessage message)
         {
-            State = DeviceState.INITIALISING;
-            var message = CreateMessage(MessageType.INITIALISE);
-            message.AddArgument(Name == null ? "N/A" : Name);
-            message.AddArgument((byte)Category);
             ADM.SendMessage(message);
         }
 
-        virtual public void Configure()
+        virtual protected void AddInit(ADMMessage message)
+        {
+            message.AddArgument(Name == null ? "N/A" : Name);
+            message.AddArgument((byte)Category);
+        }
+
+        public void Initialise()
+        {
+            State = DeviceState.INITIALISING;
+            var message = CreateMessage(MessageType.INITIALISE);
+            AddInit(message);
+            SendMessage(message);
+        }
+
+        virtual protected void AddConfig(ADMMessage message)
+        {
+            message.AddArgument(Enabled);
+            message.AddArgument(ReportInterval);
+        }
+
+        public void Configure()
         {
             State = DeviceState.CONFIGURING;
             var message = CreateMessage(MessageType.CONFIGURE);
-            message.AddArgument(Enabled);
-            message.AddArgument(ReportInterval);
-            ADM.SendMessage(message);
+            AddConfig(message);
+            SendMessage(message);
         }
 
         virtual public void RequestStatus()
         {
             var message = CreateMessage(MessageType.STATUS_REQUEST);
-            ADM.SendMessage(message);
+            SendMessage(message);
         }
 
-        virtual public void HandleMessage(ADMMessage message)
-        {
-            int argIdx = 0;
+        override public void HandleMessage(ADMMessage message)
+        {   
             switch (message.Type)
             {
                 case MessageType.INITIALISE_RESPONSE:
@@ -155,24 +174,17 @@ namespace Chetch.Arduino2
                     State = DeviceState.CONFIGURED;
                     break;
 
-                case MessageType.STATUS_RESPONSE:
-                    argIdx = GetArgumentIndex(message, MessageField.ENABLED);
-                    Enabled = message.ArgumentAsBool(argIdx);
-                    argIdx = GetArgumentIndex(message, MessageField.REPORT_INTERVAL);
-                    ReportInterval = message.ArgumentAsInt(argIdx);
-                    break;
-
                 case MessageType.COMMAND_RESPONSE:
-                    argIdx = GetArgumentIndex(message, MessageField.DEVICE_COMMAND);
-                    ArduinoCommand.DeviceCommand deviceCommand = (ArduinoCommand.DeviceCommand)message.ArgumentAsByte(argIdx);
+                    ArduinoCommand.DeviceCommand deviceCommand = GetMessageValue<ArduinoCommand.DeviceCommand>("DeviceCommand", message);
                     HandleCommandResponse(deviceCommand, message);
                     break;
+
+                case MessageType.STATUS_RESPONSE:
+                    AssignMessageValues(message, "Enabled", "ReportInterval");
+                    break;
             }
 
-            if(message.Tag > 0)
-            {
-                message.Tag = MessageTags.Release(message.Tag);
-            }
+            base.HandleMessage(message);
         }
 
         public ArduinoCommand AddCommand(ArduinoCommand cmd)
@@ -293,7 +305,7 @@ namespace Chetch.Arduino2
                                 cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
                             }
                             Console.WriteLine("------> Sending command {0}", cmd.Command);
-                            ADM.SendMessage(cm);
+                            SendMessage(cm);
                         }
                     } //if delay
                 } //if compound
@@ -324,18 +336,15 @@ namespace Chetch.Arduino2
         //Called when a command response is received
         virtual protected void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
-            int argIdx = 0;
             switch (deviceCommand)
             {
                 case ArduinoCommand.DeviceCommand.ENABLE:
                 case ArduinoCommand.DeviceCommand.DISABLE:
-                    argIdx = GetArgumentIndex(message, MessageField.ENABLED);
-                    Enabled = message.ArgumentAsBool(argIdx);
+                    AssignMessageValues(message, "Enabled");
                     break;
 
                 case ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL:
-                    argIdx = GetArgumentIndex(message, MessageField.REPORT_INTERVAL);
-                    ReportInterval = message.ArgumentAsInt(argIdx);
+                    AssignMessageValues(message, "ReportInterval");
                     break;
             }
         }
@@ -359,11 +368,7 @@ namespace Chetch.Arduino2
     public class TestDevice01 : ArduinoDevice
     {
 
-        new public enum MessageField
-        {
-            TEST_VALUE = 0
-        }
-
+        
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public int TestValue 
         {
@@ -385,34 +390,28 @@ namespace Chetch.Arduino2
             cmd.AddCommands(enable, d5, disable, d1, enable, d1, disable);
         }
 
-        public override void Serialize(Dictionary<string, object> vals)
+        override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
-            base.Serialize(vals);
-        }
-
-        public int GetArgumentIndex(ADMMessage message, MessageField field)
-        {
-            switch (field)
+            switch (fieldName)
             {
+                case "TestValue":
+                    return 0;
+
                 default:
-                    return (int)field;
+                    return base.GetArgumentIndex(fieldName, message);
             }
         }
-
         
-        public override void HandleMessage(ADMMessage message)
+        override public void HandleMessage(ADMMessage message)
         {
-            base.HandleMessage(message);
-            int argIdx;
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    argIdx = GetArgumentIndex(message, MessageField.TEST_VALUE);
-                    TestValue = message.ArgumentAsInt(argIdx);
+                    AssignMessageValues(message, "TestValue");
                     break;
-
             }
-        }
 
+            base.HandleMessage(message);
+        }
     }
 }

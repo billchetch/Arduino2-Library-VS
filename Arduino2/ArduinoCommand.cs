@@ -8,7 +8,6 @@ namespace Chetch.Arduino2
 {
     public class ArduinoCommand
     {
-
         public static ArduinoCommand Delay(int delay)
         {
             return new ArduinoCommand(delay);
@@ -34,6 +33,8 @@ namespace Chetch.Arduino2
             STOP,
             PAUSE,
             RESET,
+            ON,
+            OFF
         }
 
         public enum ParameterType

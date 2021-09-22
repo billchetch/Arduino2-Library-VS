@@ -356,6 +356,7 @@ namespace Chetch.Arduino2
 
 
             _adms[adm.ID] = adm;
+            adm.Tracing = Tracing;
             return adm;
         }
 
@@ -432,7 +433,6 @@ namespace Chetch.Arduino2
 
                             default:
                                 throw new Exception(String.Format("Unrecognised command: {0}", tgtcmd[1]));
-                                break;
                         }
                     }
                     else

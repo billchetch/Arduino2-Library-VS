@@ -64,6 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ADMMessage.cs" />
     <Compile Include="ADMService.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -74,10 +75,10 @@
     <Compile Include="ArduinoDeviceManager.cs" />
     <Compile Include="ArduinoObject.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
+    <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Devices\" />
     <Folder Include="Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

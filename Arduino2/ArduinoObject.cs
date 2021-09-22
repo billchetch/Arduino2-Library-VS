@@ -25,6 +25,8 @@ namespace Chetch.Arduino2
             {}
         }
 
+        protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public String ID { get; internal set; }
 
@@ -36,6 +38,37 @@ namespace Chetch.Arduino2
         {
             get { return Get<String>(); }
             internal set { Set(value, true); }
+        }
+        abstract protected int GetArgumentIndex(String fieldName, ADMMessage message);
+
+        protected dynamic GetMessageValue(String fieldName, Type type, ADMMessage message)
+        {
+            int argIdx = GetArgumentIndex(fieldName, message);
+            return message.GetArgument(argIdx, type);
+        }
+
+        protected T GetMessageValue<T>(String fieldName, ADMMessage message)
+        {
+            int argIdx = GetArgumentIndex(fieldName, message);
+            return message.GetArgument<T>(argIdx);
+        }
+
+        protected void AssignMessageValues(ADMMessage message, params String[] fieldNames)
+        {
+            Type type = GetType();
+            foreach (var fieldName in fieldNames)
+            {
+                var prop = type.GetProperty(fieldName);
+                prop.SetValue(this, GetMessageValue(prop.Name, prop.PropertyType, message));
+            }
+        }
+
+        virtual public void HandleMessage(ADMMessage message)
+        {
+            if (message.Tag > 0)
+            {
+                message.Tag = MessageTags.Release(message.Tag);
+            }
         }
     }
 }
