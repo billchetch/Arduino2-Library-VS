@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel;
 using Chetch.Utilities;
 
 namespace Chetch.Arduino2
 {
-    public class ArduinoDeviceGroup : ArduinoObject
+    abstract public class ArduinoDeviceGroup : ArduinoObject
     {
         public ArduinoDeviceManager ADM { get; set; }
 
@@ -37,6 +38,7 @@ namespace Chetch.Arduino2
             if (!Devices.Contains(dev))
             {
                 Devices.Add(dev);
+                dev.PropertyChanged += HandlePropertyChange;
             }
         }
 
@@ -69,6 +71,19 @@ namespace Chetch.Arduino2
             }
         }
 
+        protected void HandlePropertyChange(Object sender, PropertyChangedEventArgs eargs)
+        {
+            DSOPropertyChangedEventArgs dsoArgs = (DSOPropertyChangedEventArgs)eargs;
+            ArduinoDevice device = ((ArduinoDevice)sender);
+            var prop = device.GetProperty(dsoArgs.PropertyName, -1);
+            if (prop != null && device.IsReady)
+            {
+                HandleDevicePropertyChange(device, prop);
+            }
+        }
+
+        abstract protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property);
+        
         virtual public void ExecuteCommand(String commandAlias, List<Object> parameters = null)
         {
             foreach(var dev in Devices)

@@ -25,6 +25,9 @@ namespace Chetch.Arduino2.Devices
 
         public SwitchMode Mode { get; internal set; }
 
+        public bool IsActive => Mode == SwitchMode.ACTIVE;
+        public bool IsPassive => Mode == SwitchMode.PASSIVE;
+
         [ArduinoProperty(ArduinoPropertyAttribute.STATE | ArduinoPropertyAttribute.DATA)]
         public SwitchPosition Position 
         {
@@ -96,7 +99,24 @@ namespace Chetch.Arduino2.Devices
             base.HandleMessage(message);
         }
 
+        public void SetPosition(SwitchPosition newPosition)
+        {
+            if (IsPassive)
+            {
+                throw new InvalidOperationException(String.Format("Cannot set position of switch device {0} because it not an active switch", ID));
+            }
 
+            switch (newPosition)
+            {
+                case SwitchPosition.ON:
+                    ExecuteCommand(ArduinoCommand.DeviceCommand.ON);
+                    break;
+                case SwitchPosition.OFF:
+                    ExecuteCommand(ArduinoCommand.DeviceCommand.OFF);
+                    break;
+            }
+            
+        }
 
         protected override void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
