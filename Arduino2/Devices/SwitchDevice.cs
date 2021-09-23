@@ -55,11 +55,11 @@ namespace Chetch.Arduino2.Devices
             Tolerance = tolerance;
             Category = DeviceCategory.SWITCH;
 
-            //if (Mode == SwitchMode.ACTIVE)
-            //{
+            if (Mode == SwitchMode.ACTIVE)
+            { 
                 AddCommand(ArduinoCommand.DeviceCommand.ON);
                 AddCommand(ArduinoCommand.DeviceCommand.OFF);
-            //}
+            }
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
@@ -88,9 +88,6 @@ namespace Chetch.Arduino2.Devices
         {
             switch (message.Type)
             {
-                case MessageType.CONFIGURE_RESPONSE:
-                    break;
-
                 case MessageType.DATA:
                     AssignMessageValues(message, "PinState");
                     break;

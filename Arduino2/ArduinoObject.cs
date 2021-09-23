@@ -37,8 +37,11 @@ namespace Chetch.Arduino2
         public String Error
         {
             get { return Get<String>(); }
-            internal set { Set(value, true); }
+            internal set { Set(value, true, true); }
         }
+
+        public String ErrorInfo { get; internal set; }
+
         abstract protected int GetArgumentIndex(String fieldName, ADMMessage message);
 
         protected dynamic GetMessageValue(String fieldName, Type type, ADMMessage message)
@@ -69,6 +72,12 @@ namespace Chetch.Arduino2
             {
                 message.Tag = MessageTags.Release(message.Tag);
             }
+        }
+
+        protected void SetError(String error, String info = "N/A")
+        {
+            ErrorInfo = info;
+            Error = error;
         }
     }
 }

@@ -35,6 +35,7 @@ namespace Chetch.Arduino2
             DEVICE_ID_ALREADY_USED = 22,
             DEVICE_NOT_FOUND = 23,
             DEVICE_CANNOT_BE_CREATED = 24,
+            DEVICE_ERROR = 100,
         }
 
         public enum ADMState

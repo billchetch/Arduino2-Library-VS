@@ -14,6 +14,11 @@ namespace Chetch.Arduino2
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
+        public enum ErrorCode
+        {
+            INVALID_COMMAND = 1,
+        }
+
         public enum DeviceCategory
         {
             NOT_SET,
@@ -118,6 +123,15 @@ namespace Chetch.Arduino2
                 case "ReportInterval":
                     return message.IsCommandRelated ? 1 : 1;
 
+                case "ErrorCode":
+                    return 0;
+
+                case "ErrorSubCode":
+                    return 1;
+
+                case "ErrorFromMessage": //should give the message type that resulted in the error
+                    return 2;
+
                 default:
                     throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
             }
@@ -168,7 +182,28 @@ namespace Chetch.Arduino2
             {
                 case Messaging.MessageType.ERROR:
                     //TODO: run this through GetArgumentIndex and then use GetMessageValue ... include subcode as well
-                    Error = String.Format("A message error occured: {0}", message.GetArgument<int>(0));
+                    String error;
+                    String info;
+                    try
+                    {
+                        ArduinoDeviceManager.ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
+                        ErrorCode errorSubCode = (ErrorCode)GetMessageValue<int>("ErrorSubCode", message);
+                        error = String.Format("{0}-{1}", errorCode, errorSubCode);
+                        if (message.Arguments.Count - 1 >= GetArgumentIndex("ErrorFromMessage", message))
+                        {
+                            info = "Originating message of type " + GetMessageValue<MessageType>("ErrorFromMessage", message);
+                        }
+                        else
+                        {
+                            info = "Originating message not supplied";
+                        }
+                    } 
+                    catch (Exception e)
+                    {
+                        error = "Unknown error";
+                        info = e.Message;
+                    }
+                    SetError(error, info); //This will trigger a property change event that can be listened to
                     break;
 
                 case MessageType.INITIALISE_RESPONSE:
@@ -191,6 +226,11 @@ namespace Chetch.Arduino2
             }
 
             base.HandleMessage(message);
+        }
+
+        virtual protected void HandleError(ADMMessage message)
+        {
+
         }
 
         public ArduinoCommand AddCommand(ArduinoCommand cmd)

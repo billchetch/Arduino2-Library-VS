@@ -247,7 +247,14 @@ namespace Chetch.Arduino2
             if (propertyAttribute.IsState || propertyAttribute.IsError)
             {
                 String eventName = dsoArgs.PropertyName;
-                String eventInfo = String.Format("{0} changed from {1} to {2}", eventName, dsoArgs.OldValue, dsoArgs.NewValue);
+                String eventInfo;
+                if (propertyAttribute.IsError)
+                {
+                    eventInfo = ao.ErrorInfo; 
+                } else
+                {
+                    eventInfo = String.Format("{0} changed from {1} to {2}", eventName, dsoArgs.OldValue, dsoArgs.NewValue);
+                }
                 Object eventData = dsoArgs.NewValue;
                 String eventSource = ao.UID;
 
