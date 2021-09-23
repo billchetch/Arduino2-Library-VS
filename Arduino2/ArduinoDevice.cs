@@ -59,7 +59,7 @@ namespace Chetch.Arduino2
             internal set { Set(value, value > DeviceState.CREATED); }
         }
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, false)]
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, true)]
         public bool Enabled
         {
             get { return Get<bool>(); }
@@ -102,7 +102,8 @@ namespace Chetch.Arduino2
 
             return message;
         }
-
+        
+        
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
@@ -112,10 +113,10 @@ namespace Chetch.Arduino2
                     return 0;
 
                 case "Enabled":
-                    return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : 0;
+                    return message.IsCommandRelated ? 1 : 0;
 
                 case "ReportInterval":
-                    return (message.Type == MessageType.COMMAND_RESPONSE || message.Type == MessageType.COMMAND) ? 1 : 1;
+                    return message.IsCommandRelated ? 1 : 1;
 
                 default:
                     throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
@@ -165,6 +166,11 @@ namespace Chetch.Arduino2
         {   
             switch (message.Type)
             {
+                case Messaging.MessageType.ERROR:
+                    //TODO: run this through GetArgumentIndex and then use GetMessageValue ... include subcode as well
+                    Error = String.Format("A message error occured: {0}", message.GetArgument<int>(0));
+                    break;
+
                 case MessageType.INITIALISE_RESPONSE:
                     State = DeviceState.INITIALISED;
                     Configure();

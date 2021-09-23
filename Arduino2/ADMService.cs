@@ -34,6 +34,7 @@ namespace Chetch.Arduino2
             public const String COMMAND_DISABLE = "disable";
             public const String COMMAND_REPORT_INTERVAL = "report-interval";
 
+            public const int AO_ATTRIBUTE_FLAGS = ArduinoObject.ArduinoPropertyAttribute.IDENTIFIER | ArduinoObject.ArduinoPropertyAttribute.DESCRIPTOR | ArduinoObject.ArduinoPropertyAttribute.STATE | ArduinoObject.ArduinoPropertyAttribute.DATA | DataSourceObject.PropertyAttribute.ERROR;
             public MessageSchema() { }
 
             public MessageSchema(Message message) : base(message) { }
@@ -45,11 +46,10 @@ namespace Chetch.Arduino2
                     foreach (ArduinoDeviceManager adm in adms.Values)
                     {
                         Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                        int options = ArduinoObject.ArduinoPropertyAttribute.IDENTIFIER | ArduinoObject.ArduinoPropertyAttribute.DESCRIPTOR | ArduinoObject.ArduinoPropertyAttribute.STATE;
-                        var properties = adm.GetPropertyNames(options);
+                       var properties = adm.GetProperties(AO_ATTRIBUTE_FLAGS);
                         foreach (var p in properties)
                         {
-                            vals[p] = adm.Get<Object>(p);
+                            vals[p.Name] = p.GetValue(adm);
                         }
                         Message.AddValue("ADM:" + adm.ID, vals);
                     }
@@ -70,21 +70,12 @@ namespace Chetch.Arduino2
 
             protected void AddArduinoObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
             {
-                List<String> properties = ao.GetPropertyNames(DataSourceObject.PropertyAttribute.IDENTIFIER | DataSourceObject.PropertyAttribute.DESCRIPTOR);
-                if (changedPropertiesOnly) 
-                {
-                    properties.AddRange(ao.ChangedProperties);
-                } 
-                else 
-                {
-                    int atts = ArduinoObject.ArduinoPropertyAttribute.STATE | ArduinoObject.ArduinoPropertyAttribute.DATA | DataSourceObject.PropertyAttribute.ERROR;
-                    properties.AddRange(ao.GetPropertyNames(atts));
-                }
-
+                List<System.Reflection.PropertyInfo> properties = ao.GetProperties(AO_ATTRIBUTE_FLAGS);
                 Dictionary<String, Object> vals = new Dictionary<string, Object>();
                 foreach (var p in properties)
                 {
-                    vals[p] = ao.Get<Object>(p);
+                    if (changedPropertiesOnly && !ao.ChangedProperties.Contains(p.Name)) continue;
+                    vals[p.Name] = p.GetValue(ao);
                 }
 
                 AddValues(vals, prefix);
@@ -235,11 +226,11 @@ namespace Chetch.Arduino2
                 List<ArduinoObject> aoToSnapshot = GetArduinoObjects();
                 foreach (var ao in aoToSnapshot)
                 {
-                    var properties = ao.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
+                    /*var properties = ao.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
                     foreach(var p in properties)
                     {
                         ServiceDB.LogSnapshot(ao.UID, p, ao.Get<Object>(p));
-                    }
+                    }*/
                 }
             }
         }

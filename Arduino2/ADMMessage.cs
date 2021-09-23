@@ -159,6 +159,16 @@ namespace Chetch.Arduino2
         public List<byte[]> Arguments { get; } = new List<byte[]>();
         public bool LittleEndian { get; set; } = true;
 
+        //Convenience properties
+        public bool IsCommand => Type == MessageType.COMMAND;
+        public bool IsData => Type == MessageType.DATA;
+
+        public bool IsCommandRelated => Type == MessageType.COMMAND_RESPONSE || Type == MessageType.COMMAND;
+
+        public bool IsConfigRelated => Type == MessageType.CONFIGURE || Type == MessageType.CONFIGURE_RESPONSE;
+
+        public bool IsInitRelated => Type == MessageType.INITIALISE || Type == MessageType.INITIALISE_RESPONSE;
+
         public dynamic GetArgument(int idx, Type type = null)
         {
             if (type == null) type = typeof(Object);
