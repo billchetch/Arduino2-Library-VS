@@ -292,11 +292,11 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Command.RESET:
-                    Console.WriteLine("<<<<< REMOTE COMMAND: Reset");
+                    //Console.WriteLine("<<<<< REMOTE COMMAND: Reset");
                     break;
 
                 default:
-                    Console.WriteLine("<<<<< REMOTE COMMAND: {0}", b);
+                    //Console.WriteLine("<<<<< REMOTE COMMAND: {0}", b);
                     break;
 
             }
@@ -311,47 +311,47 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
+                    //Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     //sfc.SendCommand(StreamFlowController.Command.REQUEST_STATUS);
-                    Console.WriteLine("REMOTE ESP EVENT: Remote CTS timeout");
+                    //Console.WriteLine("REMOTE ESP EVENT: Remote CTS timeout");
                     //log.Add("EVENT: Remote CTS timeout");
                     //sfc.SendCTS(true);
                     break;
 
                 case (byte)StreamFlowController.Event.RECEIVE_BUFFER_FULL:
-                    Console.WriteLine("REMOTE ESP EVENT: Receive buffer full argghghgh");
+                    //Console.WriteLine("REMOTE ESP EVENT: Receive buffer full argghghgh");
                     break;
 
                 case (byte)StreamFlowController.Event.MAX_DATABLOCK_SIZE_EXCEEDED:
-                    Console.WriteLine("REMOTE ESP EVENT: Too much data in da block cock");
+                    //Console.WriteLine("REMOTE ESP EVENT: Too much data in da block cock");
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_REQUEST_TIMEOUT:
-                    Console.WriteLine("REMOTE ESP EVENT: The cts request has timed out");
+                    //Console.WriteLine("REMOTE ESP EVENT: The cts request has timed out");
                     break;
 
                 case (byte)StreamFlowController.Event.PING_RECEIVED:
-                    Console.WriteLine("REMOTE ESP EVENT: Ping received! aka PONG");
+                    //Console.WriteLine("REMOTE ESP EVENT: Ping received! aka PONG");
                     break;
 
 
                 case 200 + (byte)StreamFlowController.Event.PING_RECEIVED:
-                    Console.WriteLine("REMOTE ARDUINO EVENT: Ping received! aka PONG");
+                    //Console.WriteLine("REMOTE ARDUINO EVENT: Ping received! aka PONG");
                     break;
 
                 case 200 + (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine("<<<<< REMOTE ARDUINO EVENT: Reset");
+                    //Console.WriteLine("<<<<< REMOTE ARDUINO EVENT: Reset");
                     break;
 
                 case 200 + (byte)StreamFlowController.Event.SEND_BUFFER_OVERFLOW_ALERT:
-                    Console.WriteLine("REMOTE ARDUINO EVENT: Send buffer overflow alert");
+                    //Console.WriteLine("REMOTE ARDUINO EVENT: Send buffer overflow alert");
                     break;
 
                 default:
-                    Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
+                    //Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
                     break;
 
             }
@@ -364,12 +364,12 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine(">>>> LOCAL EVENT: {0} ... sending RESET to remote", b);
+                    //Console.WriteLine(">>>> LOCAL EVENT: {0} ... sending RESET to remote", b);
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
-                    Console.WriteLine("LOCAL EVENT: {0} ... CTS Timeout event sent to remote", b);
-                    Console.WriteLine("Bytes received/sent {0}/{1}", _sfc.BytesReceived, _sfc.BytesSent);
+                    //Console.WriteLine("LOCAL EVENT: {0} ... CTS Timeout event sent to remote", b);
+                    //Console.WriteLine("Bytes received/sent {0}/{1}", _sfc.BytesReceived, _sfc.BytesSent);
                     break;
 
             }
@@ -393,26 +393,20 @@ namespace Chetch.Arduino2
                     switch (message.Type)
                     {
                         case MessageType.ERROR:
-                            Console.WriteLine("---------------------------");
-                            Console.WriteLine("ADM ERROR: {0}", GetMessageValue<int>("Error", message));
+                            ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
+                            SetError("ADMErrorCode: " + errorCode.ToString(), "N/A");
                             //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
-                            Console.WriteLine("---------------------------");
+                            //Console.WriteLine("---------------------------");
                             break;
 
                         case MessageType.INITIALISE_RESPONSE:
                             State = ADMState.INITIALISED;
                             Configure();
-                            Console.WriteLine("---------------------------");
-                            Console.WriteLine("ADM INIIALISE RESPONSE");
-                            Console.WriteLine("---------------------------");
                             break;
 
                         case MessageType.CONFIGURE_RESPONSE:
                             State = ADMState.CONFIGURED;
-                            Console.WriteLine("---------------------------");
-                            Console.WriteLine("ADM CONFIGURE RESPONSE");
-                            Console.WriteLine("---------------------------");
-
+                            
                             //now initialise all devices
                             if (!IsEmpty)
                             {
@@ -568,7 +562,7 @@ namespace Chetch.Arduino2
                     return 1;
                 case "DeviceCount":
                     return 2;
-                case "Error":
+                case "ErrorCode":
                     return 0;
                 
                 default:

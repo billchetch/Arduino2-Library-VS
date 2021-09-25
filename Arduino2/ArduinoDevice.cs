@@ -326,7 +326,6 @@ namespace Chetch.Arduino2
                 {
                     if (cmd.IsDelay)
                     {
-                        Console.WriteLine("------> Delaing execution for {0} ms", cmd.DelayInterval);
                         Thread.Sleep(cmd.DelayInterval);
                     }
                     else
@@ -350,7 +349,6 @@ namespace Chetch.Arduino2
                             {
                                 cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
                             }
-                            Console.WriteLine("------> Sending command {0}", cmd.Command);
                             SendMessage(cm);
                         }
                     } //if delay

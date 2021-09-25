@@ -75,10 +75,12 @@
     <Compile Include="ArduinoDeviceManager.cs" />
     <Compile Include="ArduinoObject.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
+    <Compile Include="Devices\Electricity\ZMPT101B.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Devices\Diagnostics\" />
     <Folder Include="Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
