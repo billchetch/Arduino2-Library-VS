@@ -329,7 +329,7 @@ namespace Chetch.Arduino2
             }
 
             Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so attempting to start {1} ADMs ...", cnn.Name, _adms.Count);
-            /*foreach (var adm in _adms.Values)
+            foreach (var adm in _adms.Values)
             {
                 do
                 {
@@ -344,7 +344,7 @@ namespace Chetch.Arduino2
                         Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: ADM {0} {1}", adm.ID, e.Message);
                     }
                 } while (!adm.IsReady);
-            }*/
+            }
         }
 
         protected ArduinoDeviceManager AddADM(ArduinoDeviceManager adm)
