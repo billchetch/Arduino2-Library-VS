@@ -331,19 +331,22 @@ namespace Chetch.Arduino2
             Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so attempting to start {1} ADMs ...", cnn.Name, _adms.Count);
             foreach (var adm in _adms.Values)
             {
+                bool admReadyToUse = false;
                 do
                 {
                     try
                     {
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is starting up...", adm.ID);
-                        adm.Begin(5000);
+                        adm.Begin(8000);
+                        admReadyToUse = true;
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is ready for use", adm.ID);
                     }
                     catch (Exception e)
                     {
                         Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: ADM {0} {1}", adm.ID, e.Message);
+                        admReadyToUse = false;
                     }
-                } while (!adm.IsReady);
+                } while (!admReadyToUse);
             }
         }
 

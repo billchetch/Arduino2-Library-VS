@@ -707,24 +707,28 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Stop();
             if (!IsConnected)
             {
-                Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} Reconnecting ...", ID);
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Reconnecting ...", ID);
                 try
                 {
                     Disconnect();
                     Connect(_connectTimeout);
-                    Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} Connected = {1}", ID, IsConnected);
-                    if (!IsReady)
+                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Connected = {1}, IsReady = {2}", ID, IsConnected, IsReady);
+                    if (!IsReady || !Synchronise())
                     {
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
                         Initialise(); //this will start init config process
                     }
                 }
                 catch (Exception e)
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} OnSynchroniseTimer Error: {1}", ID, e.Message);
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
             } else if(IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
-                Synchronise();
+                if (!Synchronise())
+                {
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} failed to synchronise", ID);
+                }
             }
             _synchroniseTimer.Start();
         }
