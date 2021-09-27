@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Chetch.Messaging;
-using Chetch.Arduino;
 using Chetch.Utilities;
 
 namespace Chetch.Arduino2

@@ -8,7 +8,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.ComponentModel;
 using Chetch.Messaging;
-using Chetch.Arduino;
 using Chetch.Services;
 using Chetch.Database;
 using Chetch.Utilities;
