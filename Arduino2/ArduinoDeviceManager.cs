@@ -8,7 +8,6 @@ using System.Diagnostics;
 using Chetch.Utilities;
 using Chetch.Utilities.Streams;
 using Chetch.Messaging;
-using Chetch.Arduino;
 
 
 namespace Chetch.Arduino2
