@@ -38,6 +38,18 @@ namespace Chetch.Arduino2
             }
             return base.GetEndPoint();
         }
+
+        protected override void ConnectToEndPoint()
+        {
+            try
+            {
+                base.ConnectToEndPoint();
+            } catch (Exception e)
+            {
+                RemoteEndPoint = null;
+                throw e;
+            }
+        }
     }
 
 }
