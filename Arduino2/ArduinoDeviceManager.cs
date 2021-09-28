@@ -60,10 +60,10 @@ namespace Chetch.Arduino2
             }
         }
 
-        public static ArduinoDeviceManager Create(String portName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
+        public static ArduinoDeviceManager Create(String boardName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
-            var ports = SerialPorts.Find(portName);
-            var serial = new SerialPortX(ports[0], baudRate);
+            var ports = SerialPorts.Find(boardName);
+            var serial = new ArduinoSerialConnection(ports[0], baudRate);
             var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
             var adm = new ArduinoDeviceManager(sfc, connectTimeout);
             adm.ID = ports[0];

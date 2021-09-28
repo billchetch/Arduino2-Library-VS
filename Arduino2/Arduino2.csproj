@@ -71,6 +71,7 @@
     <Compile Include="ArduinoDevice.cs" />
     <Compile Include="ArduinoDeviceManager.cs" />
     <Compile Include="ArduinoObject.cs" />
+    <Compile Include="ArduinoSerialConnection.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
     <Compile Include="Devices\Electricity\ZMPT101B.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
