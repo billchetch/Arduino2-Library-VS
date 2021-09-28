@@ -62,6 +62,10 @@ namespace Chetch.Arduino2
             foreach (var fieldName in fieldNames)
             {
                 var prop = type.GetProperty(fieldName);
+                if(prop == null)
+                {
+                    throw new ArgumentException(String.Format("Cannot assign message value as property {0} does not exist", fieldName));
+                }
                 prop.SetValue(this, GetMessageValue(prop.Name, prop.PropertyType, message));
             }
         }

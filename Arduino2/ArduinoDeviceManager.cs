@@ -93,6 +93,13 @@ namespace Chetch.Arduino2
             internal set { Set(value); }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
+        public bool Disconnecting
+        {
+            get { return Get<bool>(); }
+            internal set { Set(value); }
+        }
+
         public bool IsConnected => _sfc.IsReady; //an alias for the readiness of the connection
         
         private bool _synchronising = false;
@@ -148,11 +155,19 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceived { get; internal set; }
 
-        [ArduinoProperty(PropertyAttribute.DESCRIPTOR, 0)]
-        public long BoardMillis { get; internal set; }
+        //Board properties (assigned by return message from RequestStatus)
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public long BoardMillis { get; internal set; } = 0;
 
-        [ArduinoProperty(PropertyAttribute.DESCRIPTOR, 0)]
-        public int BoardMemory { get; internal set; }
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public int BoardMemory { get; internal set; } = 0;
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public bool BoardInitialised { get; internal set; } = false;
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public bool BoardConfigured { get; internal set; } = false;
+        
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -256,6 +271,7 @@ namespace Chetch.Arduino2
         public void Disconnect()
         {
             if (Connecting) throw new Exception("ADM is in the process of connecting");
+            Disconnecting = true;
             Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Disconnecting...", ID);
             if (_synchroniseTimer != null)
             {
@@ -267,6 +283,7 @@ namespace Chetch.Arduino2
                 _sfc.Close();
             }
             Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Disconnected", ID);
+            Disconnecting = false;
         }
 
         void HandleStreamError(Object sender, StreamFlowController.StreamErrorArgs e)
@@ -420,7 +437,7 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.STATUS_RESPONSE:
-                            AssignMessageValues(message, "BoardMillis", "BoardMemory");
+                            AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
                             if (IsDeviceReady)
                             {
                                 int n = GetMessageValue<int>("DeviceCount", message);
@@ -559,8 +576,12 @@ namespace Chetch.Arduino2
                     return 0;
                 case "BoardMemory":
                     return 1;
-                case "DeviceCount":
+                case "BoardInitialised":
                     return 2;
+                case "BoardConfigured":
+                    return 3;
+                case "DeviceCount":
+                    return 4;
                 case "ErrorCode":
                     return 0;
                 
@@ -702,7 +723,7 @@ namespace Chetch.Arduino2
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
         {
-            if (Connecting || Synchronising) return;
+            if (Connecting || Synchronising || Disconnecting) return;
 
             _synchroniseTimer.Stop();
             if (!IsConnected)
@@ -723,14 +744,17 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
+            } else if(IsReady && LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TTIMEOUT)
             {
                 try
                 {
-                    if (!Synchronise())
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TTIMEOUT);
+                    if(!BoardInitialised || !BoardConfigured || !Synchronise())
                     {
-                        Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} failed to synchronise", ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
+                        Initialise(); //this will start init config process
                     }
+                    
                 } catch (Exception e)
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
