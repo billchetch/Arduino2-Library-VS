@@ -185,7 +185,7 @@ namespace Chetch.Arduino2
             {
                 if (Measurement.HasTimedOut(started, timeout))
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, timeoutMessage);
+                    Tracing?.TraceEvent(TraceEventType.Error, 300, "ADM {0} Error: {1}", ID, timeoutMessage);
                     throw new TimeoutException(timeoutMessage);
                 }
             }
@@ -211,7 +211,7 @@ namespace Chetch.Arduino2
                         var cnn = (ArduinoTCPConnection)_sfc.Stream;
                         if (cnn.RemoteEndPoint != null)
                         {
-                            _sfc.Stream = new ArduinoTCPConnection(cnn.RemoteEndPoint);
+                            _sfc.Stream = new ArduinoTCPConnection(cnn);
                         }
                     }
 
@@ -222,7 +222,7 @@ namespace Chetch.Arduino2
                     }
                     catch (Exception e)
                     {
-                        Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, e.Message);
+                        Tracing?.TraceEvent(TraceEventType.Error, 311, "ADM {0} Error: {1}", ID, e.Message);
                     }
                     if (!_sfc.IsOpen)
                     {
@@ -273,7 +273,7 @@ namespace Chetch.Arduino2
         {
             StreamFlowController sfc = (StreamFlowController)sender;
 
-            Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Stream Error: {1} {2}", ID, e.Error, e.Exception == null ? "N/A" : e.Exception.Message);
+            Tracing?.TraceEvent(TraceEventType.Error, 400, "ADM {0} Stream Error: {1} {2}", ID, e.Error, e.Exception == null ? "N/A" : e.Exception.Message);
             switch (e.Error)
             {
                 case StreamFlowController.ErrorCode.UNEXPECTED_DISCONNECT:
@@ -310,12 +310,12 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    //Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
+                    Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     //sfc.SendCommand(StreamFlowController.Command.REQUEST_STATUS);
-                    //Console.WriteLine("REMOTE ESP EVENT: Remote CTS timeout");
+                    Console.WriteLine("REMOTE ESP EVENT: Remote CTS timeout");
                     //log.Add("EVENT: Remote CTS timeout");
                     //sfc.SendCTS(true);
                     break;
@@ -329,7 +329,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_REQUEST_TIMEOUT:
-                    //Console.WriteLine("REMOTE ESP EVENT: The cts request has timed out");
+                    Console.WriteLine("REMOTE ESP EVENT: The cts request has timed out");
                     break;
 
                 case (byte)StreamFlowController.Event.PING_RECEIVED:
@@ -350,7 +350,7 @@ namespace Chetch.Arduino2
                     break;
 
                 default:
-                    //Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
+                    Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
                     break;
 
             }
@@ -497,7 +497,7 @@ namespace Chetch.Arduino2
             }
             catch (Exception ex)
             {
-                Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} Error: {1}", ID, ex.Message);
+                Tracing?.TraceEvent(TraceEventType.Error, 500, "ADM {0} Error: {1}", ID, ex.Message);
             }
 
             if (message != null && IsBoardReady && MessageReceived != null)
@@ -697,6 +697,7 @@ namespace Chetch.Arduino2
                 _synchroniseTimer.Elapsed += OnSynchroniseTimer;
             }
             _synchroniseTimer.Start();
+            Tracing?.TraceEvent(TraceEventType.Information, 0, "Staring sync timer with interval of {0}ms", DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
         }
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
@@ -724,9 +725,15 @@ namespace Chetch.Arduino2
                 }
             } else if(IsReady && LastMessageReceived != default(DateTime) && ((DateTime.Now.Ticks - LastMessageReceived.Ticks) / TimeSpan.TicksPerMillisecond) > DEFAULT_INACTIVITY_TTIMEOUT)
             {
-                if (!Synchronise())
+                try
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} failed to synchronise", ID);
+                    if (!Synchronise())
+                    {
+                        Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} failed to synchronise", ID);
+                    }
+                } catch (Exception e)
+                {
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
             }
             _synchroniseTimer.Start();

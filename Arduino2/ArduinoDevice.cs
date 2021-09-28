@@ -419,6 +419,8 @@ namespace Chetch.Arduino2
             internal set { Set(value, IsReady); }
         }
 
+        public int PrevTestValue { get; internal set; } = -1;
+
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
@@ -450,6 +452,7 @@ namespace Chetch.Arduino2
             switch (message.Type)
             {
                 case MessageType.DATA:
+                    PrevTestValue = TestValue;
                     AssignMessageValues(message, "TestValue");
                     break;
             }

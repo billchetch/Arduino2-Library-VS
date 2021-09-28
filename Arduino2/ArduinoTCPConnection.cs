@@ -22,12 +22,18 @@ namespace Chetch.Arduino2
             NetworkServiceURL = networkServiceURL;
         }
 
-        public ArduinoTCPConnection(IPEndPoint remoteEndPoint) : base(remoteEndPoint) { }
+        public ArduinoTCPConnection(ArduinoTCPConnection cnn) : base(null)
+        {
+            NetworkHostName = cnn.NetworkHostName;
+            NetworkServiceURL = cnn.NetworkServiceURL;
+            RemoteEndPoint = cnn.RemoteEndPoint;
+        }
 
         override protected IPEndPoint GetEndPoint()
         {
             if (RemoteEndPoint == null)
             {
+                NetworkAPI.SetHTTPTimeout(5000);
                 NetworkAPI.Service service = NetworkAPI.GetAPIService(NetworkHostName, NetworkServiceURL);
                 if (service == null) throw new Exception("Cannot find service " + NetworkHostName);
 
