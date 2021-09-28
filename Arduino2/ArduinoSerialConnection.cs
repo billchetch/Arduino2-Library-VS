@@ -14,7 +14,7 @@ namespace Chetch.Arduino2
 
         public ArduinoSerialConnection(String portName, int baudRate) : base(portName, baudRate)
         {
-
+            //empty
         }
     }
 }
