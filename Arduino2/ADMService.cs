@@ -97,7 +97,8 @@ namespace Chetch.Arduino2
         }
 
         protected const int DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL = 30 * 1000;
-         
+        protected const int MAX_BEGIN_ATTEMPTS = 5;
+
         protected ADMServiceDB ServiceDB { get; set; }
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         
@@ -331,11 +332,12 @@ namespace Chetch.Arduino2
             foreach (var adm in _adms.Values)
             {
                 bool admReadyToUse = false;
+                int beginAttempts = 1;
                 do
                 {
                     try
                     {
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is starting up...", adm.ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is starting up (attempt {1})...", adm.ID, beginAttempts);
                         adm.Begin(8000);
                         admReadyToUse = true;
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is ready for use", adm.ID);
@@ -344,6 +346,11 @@ namespace Chetch.Arduino2
                     {
                         Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: ADM {0} {1}", adm.ID, e.Message);
                         admReadyToUse = false;
+                    }
+                    if(beginAttempts >= MAX_BEGIN_ATTEMPTS)
+                    {
+                        Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} failed to start after {1} attempts", adm.ID, beginAttempts);
+                        break;
                     }
                 } while (!admReadyToUse);
             }

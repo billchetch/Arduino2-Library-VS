@@ -744,13 +744,18 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(IsReady && LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TTIMEOUT)
+            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TTIMEOUT)
             {
                 try
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TTIMEOUT);
-                    if(!BoardInitialised || !BoardConfigured || !Synchronise())
+                    if(!IsReady || !BoardInitialised || !BoardConfigured || !Synchronise())
                     {
+                        if (!IsReady)
+                        {
+                            Disconnect();
+                            Connect(_connectTimeout);
+                        }
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
                         Initialise(); //this will start init config process
                     }

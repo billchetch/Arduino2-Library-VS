@@ -78,7 +78,13 @@ namespace Chetch.Arduino2
             var prop = device.GetProperty(dsoArgs.PropertyName, -1);
             if (prop != null && device.IsReady)
             {
-                HandleDevicePropertyChange(device, prop);
+                try
+                {
+                    HandleDevicePropertyChange(device, prop);
+                } catch (Exception e)
+                {
+                    ADM.Tracing?.TraceEvent(System.Diagnostics.TraceEventType.Error, 900, "DG {0} Error: {1}", UID, e.Message);
+                }
             }
         }
 
