@@ -96,10 +96,13 @@ namespace Chetch.Arduino2
             }
         }
 
+        protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
+        protected const int MAX_BEGIN_ATTEMPTS = 3;
         protected const int DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL = 30 * 1000;
-        protected const int MAX_BEGIN_ATTEMPTS = 5;
-
+        
         protected ADMServiceDB ServiceDB { get; set; }
+
+        private System.Timers.Timer _beginADMsTimer;
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         
         private System.Timers.Timer _logSnapshotTimer;
@@ -328,9 +331,27 @@ namespace Chetch.Arduino2
                 return;
             }
 
-            Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so attempting to start {1} ADMs ...", cnn.Name, _adms.Count);
+            if(_beginADMsTimer == null)
+            {
+                _beginADMsTimer = new System.Timers.Timer();
+                _beginADMsTimer.Elapsed += OnBeginADMsTimer;
+                _beginADMsTimer.Interval = BEGIN_ADMS_TIMER_INTERVAL;
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so starting up {1} ADMs ...", cnn.Name, _adms.Count);
+                OnBeginADMsTimer(null, null);
+
+            }
+
+            
+        }
+
+        private void OnBeginADMsTimer(Object sender, EventArgs earg)
+        {
+            _beginADMsTimer.Stop();
+
             foreach (var adm in _adms.Values)
             {
+                if (adm.State >= ArduinoDeviceManager.ADMState.BEGUN) continue;
+
                 bool admReadyToUse = false;
                 int beginAttempts = 1;
                 do
@@ -346,14 +367,16 @@ namespace Chetch.Arduino2
                     {
                         Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: ADM {0} {1}", adm.ID, e.Message);
                         admReadyToUse = false;
-                    }
-                    if(beginAttempts >= MAX_BEGIN_ATTEMPTS)
-                    {
-                        Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} failed to start after {1} attempts", adm.ID, beginAttempts);
-                        break;
+                        beginAttempts++;
+                        if(beginAttempts >= MAX_BEGIN_ATTEMPTS)
+                        {
+                            Tracing?.TraceEvent(TraceEventType.Error, 0, "ADM {0} failed to start after {1} attempts so abandoning for now", adm.ID, beginAttempts);
+                            break;
+                        }
                     }
                 } while (!admReadyToUse);
             }
+            _beginADMsTimer.Start();
         }
 
         protected ArduinoDeviceManager AddADM(ArduinoDeviceManager adm)

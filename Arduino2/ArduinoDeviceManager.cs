@@ -40,6 +40,8 @@ namespace Chetch.Arduino2
         public enum ADMState
         {
             CREATED = 1,
+            BEGINNING,
+            BEGUN,
             INITIALISING,
             INITIALISED,
             CONFIGURING,
@@ -124,7 +126,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE)]
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, ADMState.CREATED)]
         public ADMState State
         {
             get { return Get<ADMState>(); }
@@ -690,12 +692,16 @@ namespace Chetch.Arduino2
 
         public void Begin(int timeout, bool allowNoDevices = false)
         {
+            State = ADMState.BEGINNING;
+
             //will close the stream if it's open and set Connected to false
             Disconnect();
 
             DateTime started = DateTime.Now;
             Connect(timeout);
-            
+
+            State = ADMState.BEGUN;
+
             Initialise(allowNoDevices);
             
             while (!IsReady)
