@@ -192,7 +192,7 @@ namespace Chetch.Arduino2
 
             foreach (var adm in _adms.Values)
             {
-                adm.Disconnect();
+                adm.End();
             }
 
             if(ServiceDB != null)

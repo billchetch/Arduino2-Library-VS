@@ -70,7 +70,7 @@ namespace Chetch.Arduino2
             internal set { Set(value, IsReady); }
         }
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE | PropertyAttribute.SERIALIZABLE, -1)]
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, -1)]
         public int ReportInterval
         {
             get { return Get<int>(); }

@@ -17,6 +17,7 @@ namespace Chetch.Arduino2
         public const byte ADM_TARGET_ID = 0;
         public const byte ADM_STREAM_TARGET_ID = 255;
         public const int ADM_MESSAGE_SIZE = 50; //in bytes
+        public const byte RESET_ADM_COMMAND = 201;
         public const int DEFAULT_CONNECT_TIMEOUT = 5000;
         public const int DEFAULT_SYNCHRONISE_TIMEOUT = 3000;
         public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
@@ -725,6 +726,15 @@ namespace Chetch.Arduino2
             }
             _synchroniseTimer.Start();
             Tracing?.TraceEvent(TraceEventType.Information, 0, "Staring sync timer with interval of {0}ms", DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
+        }
+
+        public void End()
+        {
+            var message = CreateMessage(MessageType.RESET);
+            SendMessage(message);
+            wait(100);
+
+            Disconnect();
         }
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)

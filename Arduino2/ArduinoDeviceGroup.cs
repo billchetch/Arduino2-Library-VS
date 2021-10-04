@@ -24,6 +24,7 @@ namespace Chetch.Arduino2
         //use the Enable method to set this value
         public bool Enabled { get; private set; } = false;
 
+        private Object _handlePropertyChangeLock = new Object();
 
         public ArduinoDeviceGroup(String id, String name)
         {
@@ -80,7 +81,10 @@ namespace Chetch.Arduino2
             {
                 try
                 {
-                    HandleDevicePropertyChange(device, prop);
+                    lock (_handlePropertyChangeLock)
+                    {
+                        HandleDevicePropertyChange(device, prop);
+                    }
                 } catch (Exception e)
                 {
                     ADM.Tracing?.TraceEvent(System.Diagnostics.TraceEventType.Error, 900, "DG {0} Error: {1}", UID, e.Message);
