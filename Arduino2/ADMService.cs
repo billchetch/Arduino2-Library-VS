@@ -180,6 +180,11 @@ namespace Chetch.Arduino2
 
         protected override void OnStop()
         {
+            if(_beginADMsTimer != null)
+            {
+                _beginADMsTimer.Stop();
+            }
+
             if (_logSnapshotTimer != null)
             {
                 _logSnapshotTimer.Stop();
