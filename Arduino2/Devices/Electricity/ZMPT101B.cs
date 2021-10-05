@@ -13,26 +13,41 @@ namespace Chetch.Arduino2.Devices.Electricity
         public const int DEFAULT_SAMPLE_SIZE = 500;
         public const int DEFAULT_SAMPLE_INTERVAL = 1000; //Note: IN MICROS!
         
+        public enum Target
+        {
+            NONE = 0,
+            VOLTAGE = 1,
+            HZ = 2,
+        }
+
         public byte Pin { get; internal set; }
 
         public int SampleSize { get; set; } = DEFAULT_SAMPLE_SIZE;
 
         public int SampleInterval { get; set; } = DEFAULT_SAMPLE_INTERVAL;
 
-        private int _targetVoltage = -1; //if < 0 then no stabalising is required
+        public Target Targeting { get; internal set; }  = Target.NONE;
+        private int _targetValue = -1; //if < 0 then no stabalising is required
         private int _targetTolerance = 0;
-        private int _voltageLowerBound = 0;
-        private int _voltageUpperBound = -1;
+        private int _targetLowerBound = 0;
+        private int _targetUpperBound = -1;
 
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public float Voltage
         {
             get { return Get<float>(); }
-            internal set { Set(value, IsReady); }
+            internal set { Set(value, IsReady, IsReady); }
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public float Hz
+        {
+            get { return Get<float>(); }
+            internal set { Set(value, IsReady); }
+        }
+
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, 0)]
+        public float Adjustment
         {
             get { return Get<float>(); }
             internal set { Set(value, IsReady); }
@@ -44,12 +59,13 @@ namespace Chetch.Arduino2.Devices.Electricity
             Category = DeviceCategory.VAC_SENSOR;
         }
 
-        public void SetTargetVoltge(int targetVoltage, int targetTolerance, int voltageLowerBound = 0, int voltageUpperBound = -1)
+        public void SetTargetParameterse(Target target, int targetValue, int targetTolerance, int targetLowerBound = 0, int targetUpperBound = -1)
         {
-            _targetVoltage = targetVoltage;
+            Targeting = target;
+            _targetValue = targetValue;
             _targetTolerance = targetTolerance;
-            _voltageLowerBound = voltageLowerBound;
-            _voltageUpperBound = voltageUpperBound;
+            _targetLowerBound = targetLowerBound;
+            _targetUpperBound = targetUpperBound;
         }
 
         protected override void AddConfig(ADMMessage message)
@@ -59,10 +75,11 @@ namespace Chetch.Arduino2.Devices.Electricity
             message.AddArgument(Pin);
             message.AddArgument(SampleSize);
             message.AddArgument(SampleInterval);
-            /*message.AddArgument(_targetVoltage);
+            message.AddArgument((byte)Targeting);
+            message.AddArgument(_targetValue);
             message.AddArgument(_targetTolerance);
-            message.AddArgument(_voltageLowerBound);
-            message.AddArgument(_voltageUpperBound);*/
+            message.AddArgument(_targetLowerBound);
+            message.AddArgument(_targetUpperBound);
             //message.AddArgument(); //Scale wave form:
             //message.AddArgument(); //Final offset:
 
@@ -78,6 +95,9 @@ namespace Chetch.Arduino2.Devices.Electricity
                 case "Hz":
                     return 1;
 
+                case "Adjustment":
+                    return 0;
+
                 default:
                     return base.GetArgumentIndex(fieldName, message);
             }
@@ -89,6 +109,10 @@ namespace Chetch.Arduino2.Devices.Electricity
             {
                 case MessageType.DATA:
                     AssignMessageValues(message, "Voltage", "Hz");
+                    break;
+
+                case MessageType.WARNING:
+                    AssignMessageValues(message, "Adjustment");
                     break;
             }
 

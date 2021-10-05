@@ -12,8 +12,8 @@ namespace Chetch.Arduino2
         [AttributeUsage(AttributeTargets.Property)]
         public class ArduinoPropertyAttribute : DataSourceObject.PropertyAttribute
         {
-            public const int STATE = 64;
-            public const int DATA = 128;
+            public const int STATE = 64; //Tells of the fundamental state of the device and in this regard a change of value would be something to record
+            public const int DATA = 128; //Tells of the data produced by the device and in this regard would be logged in periodic intervals
             
             public bool IsState => HasAttribute(STATE);
             public bool IsData => HasAttribute(DATA);
