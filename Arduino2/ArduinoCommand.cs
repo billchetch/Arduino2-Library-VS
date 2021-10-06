@@ -34,7 +34,9 @@ namespace Chetch.Arduino2
             PAUSE,
             RESET,
             ON,
-            OFF
+            OFF,
+            MOVE,
+            ROTATE,
         }
 
         public enum ParameterType
@@ -147,7 +149,7 @@ namespace Chetch.Arduino2
         {
             if(parameters.Count > ParameterTypes.Count)
             {
-                throw new Exception(String.Format("Canno validate parameters as there are too many. Command {0} specifies {1} parameter types but {2} parameters passed", Alias, ParameterTypes.Count, parameters.Count ));
+                throw new Exception(String.Format("Cannot validate parameters as there are too many. Command {0} specifies {1} parameter types but {2} parameters passed", Alias, ParameterTypes.Count, parameters.Count ));
             }
 
             for(int i = 0; i < parameters.Count; i++)

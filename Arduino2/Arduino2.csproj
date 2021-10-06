@@ -74,6 +74,7 @@
     <Compile Include="ArduinoSerialConnection.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
     <Compile Include="Devices\Electricity\ZMPT101B.cs" />
+    <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

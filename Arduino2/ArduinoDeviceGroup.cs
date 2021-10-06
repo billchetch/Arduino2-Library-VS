@@ -83,6 +83,11 @@ namespace Chetch.Arduino2
                 {
                     lock (_handlePropertyChangeLock)
                     {
+                        if(prop.Name == "State" && device.IsReady)
+                        {
+                            OnDeviceReady(device);
+                        }
+
                         HandleDevicePropertyChange(device, prop);
                     }
                 } catch (Exception e)
@@ -90,6 +95,11 @@ namespace Chetch.Arduino2
                     ADM.Tracing?.TraceEvent(System.Diagnostics.TraceEventType.Error, 900, "DG {0} Error: {1}", UID, e.Message);
                 }
             }
+        }
+
+        virtual protected void OnDeviceReady(ArduinoDevice device)
+        {
+            //a hook for convenience
         }
 
         abstract protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property);

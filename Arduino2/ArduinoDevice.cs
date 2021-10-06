@@ -30,6 +30,8 @@ namespace Chetch.Arduino2
             ALARM = 7,
             VAC_SENSOR = 8,
             SWITCH = 9,
+            SERVO = 10,
+            MOTOR = 11,
         }
 
         public enum DeviceState
@@ -337,18 +339,25 @@ namespace Chetch.Arduino2
                         List<Object> allParams = new List<Object>();
                         if (cmd.Parameters != null) allParams.AddRange(cmd.Parameters);
                         if (parameters != null) allParams.AddRange(parameters);
-                        cmd.ValidateParameters(allParams);
-                        if (HandleCommand(cmd, allParams))
+                        try
                         {
-                            //assume the command is a message
-                            var cm = CreateMessage(MessageType.COMMAND);
-                            cm.Tag = MessageTags.CreateTagInSet(tag);
-                            cm.AddArgument((byte)cmd.Command);
-                            foreach (var p in allParams)
+                            cmd.ValidateParameters(allParams);
+                            if (HandleCommand(cmd, allParams))
                             {
-                                cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                                //assume the command is a message
+                                var cm = CreateMessage(MessageType.COMMAND);
+                                cm.Tag = MessageTags.CreateTagInSet(tag);
+                                cm.AddArgument((byte)cmd.Command);
+                                foreach (var p in allParams)
+                                {
+                                    cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                                }
+                                //Console.WriteLine("Sending command {0} to {1}", cmd.Alias, UID);
+                                SendMessage(cm);
                             }
-                            SendMessage(cm);
+                        } catch (Exception e)
+                        {
+                            ADM?.Tracing.TraceEvent(System.Diagnostics.TraceEventType.Error, 1000, e.Message);
                         }
                     } //if delay
                 } //if compound

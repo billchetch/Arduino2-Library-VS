@@ -764,7 +764,7 @@ namespace Chetch.Arduino2
             {
                 try
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TTIMEOUT);
+                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TTIMEOUT);
                     if(!IsReady || !BoardInitialised || !BoardConfigured || !Synchronise())
                     {
                         if (!IsReady)
