@@ -21,7 +21,7 @@ namespace Chetch.Arduino2
         public const int DEFAULT_CONNECT_TIMEOUT = 5000;
         public const int DEFAULT_SYNCHRONISE_TIMEOUT = 3000;
         public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
-        public const int DEFAULT_INACTIVITY_TTIMEOUT = 5000;
+        public const int DEFAULT_INACTIVITY_TIMEOUT = 30000;
 
         public enum ErrorCode
         {
@@ -157,6 +157,13 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceived { get; internal set; }
+
+        //Board properties (assigned by return message from initialise response)
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public String BoardName { get; internal set; }
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public int BoardMaxDevices { get; internal set; } = 0;
 
         //Board properties (assigned by return message from RequestStatus)
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
@@ -330,12 +337,13 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
+                    //Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
+                    Tracing?.TraceEvent(TraceEventType.Information, 1000, "{0} REMOTE ESP EVENT: Reset", ID);
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     //sfc.SendCommand(StreamFlowController.Command.REQUEST_STATUS);
-                    Console.WriteLine("REMOTE ESP EVENT: Remote CTS timeout");
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Remote CTS timeout", ID);
                     //log.Add("EVENT: Remote CTS timeout");
                     //sfc.SendCTS(true);
                     break;
@@ -349,7 +357,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_REQUEST_TIMEOUT:
-                    Console.WriteLine("REMOTE ESP EVENT: The cts request has timed out");
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: The cts request has timed out", ID);
                     break;
 
                 case (byte)StreamFlowController.Event.PING_RECEIVED:
@@ -370,7 +378,7 @@ namespace Chetch.Arduino2
                     break;
 
                 default:
-                    Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
+                    //Console.WriteLine("REMOTE {0} EVENT: {1}", b > 200 ? "ARDUINO" : "ESP", b);
                     break;
 
             }
@@ -420,7 +428,15 @@ namespace Chetch.Arduino2
 
                         case MessageType.INITIALISE_RESPONSE:
                             State = ADMState.INITIALISED;
-                            Configure();
+                            AssignMessageValues(message, "BoardName", "BoardMaxDevices");
+                            Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}", ID, BoardName, BoardMaxDevices);
+                            if(_devices.Count > BoardMaxDevices)
+                            {
+                                throw new Exception(String.Format("{0} ADM has {1} devices but board {2} only supports {3} devices", ID, _devices.Count, BoardName, BoardMaxDevices));
+                            } else
+                            {
+                                Configure();
+                            }
                             break;
 
                         case MessageType.CONFIGURE_RESPONSE:
@@ -575,6 +591,10 @@ namespace Chetch.Arduino2
         }*/
             switch (fieldName)
             {
+                case "BoardName":
+                    return 0;
+                case "BoardMaxDevices":
+                    return 1;
                 case "BoardMillis":
                     return 0;
                 case "BoardMemory":
@@ -728,12 +748,23 @@ namespace Chetch.Arduino2
             Tracing?.TraceEvent(TraceEventType.Information, 0, "Staring sync timer with interval of {0}ms", DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
         }
 
-        public void End()
+        public void End(int timeout = -1)
         {
-            var message = CreateMessage(MessageType.RESET);
-            SendMessage(message);
-            wait(100);
+            try
+            {
+                var message = CreateMessage(MessageType.RESET);
+                SendMessage(message);
+                wait(100);
+            } catch (Exception e)
+            {
+                Tracing?.TraceEvent(TraceEventType.Error, 2000, "{0} ", ID, e.Message);
+            }
 
+            while (Connecting || Synchronising)
+            {
+                Tracing?.TraceEvent(TraceEventType.Information, 2000, "{0} Call to end but currently busy (connecting = {1}, synchronising = {2}) so waiting", ID, Connecting, Synchronising);
+                wait(1000);
+            }
             Disconnect();
         }
 
@@ -760,11 +791,11 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TTIMEOUT)
+            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TIMEOUT)
             {
                 try
                 {
-                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TTIMEOUT);
+                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TIMEOUT);
                     if(!IsReady || !BoardInitialised || !BoardConfigured || !Synchronise())
                     {
                         if (!IsReady)

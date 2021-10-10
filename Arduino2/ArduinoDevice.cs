@@ -419,8 +419,9 @@ namespace Chetch.Arduino2
 
     public class TestDevice01 : ArduinoDevice
     {
+        List<int> valueHistory = new List<int>();
+        List<int> timestampHistory = new List<int>();
 
-        
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public int TestValue 
         {
@@ -430,6 +431,7 @@ namespace Chetch.Arduino2
 
         public int PrevTestValue { get; internal set; } = -1;
 
+        
         public TestDevice01(String id, String name = "TEST01") : base(id, name)
         {
             Category = DeviceCategory.DIAGNOSTICS;
@@ -462,6 +464,8 @@ namespace Chetch.Arduino2
             {
                 case MessageType.DATA:
                     PrevTestValue = TestValue;
+                    //valueHistory.Add(message.GetArgument<int>(0));
+                    //timestampHistory.Add(message.GetArgument<int>(1));
                     AssignMessageValues(message, "TestValue");
                     break;
             }

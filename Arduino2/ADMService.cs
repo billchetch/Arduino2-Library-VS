@@ -102,6 +102,8 @@ namespace Chetch.Arduino2
         
         protected ADMServiceDB ServiceDB { get; set; }
 
+        protected bool ServiceIsStopping { get; private set; } = false;
+
         private System.Timers.Timer _beginADMsTimer;
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         
@@ -180,6 +182,7 @@ namespace Chetch.Arduino2
 
         protected override void OnStop()
         {
+            ServiceIsStopping = true;
             if(_beginADMsTimer != null)
             {
                 _beginADMsTimer.Stop();
@@ -188,6 +191,11 @@ namespace Chetch.Arduino2
             if (_logSnapshotTimer != null)
             {
                 _logSnapshotTimer.Stop();
+            }
+
+            lock (_dispatchMessageLock)
+            {
+                _messagesToDispatch.Clear();
             }
 
             foreach (var adm in _adms.Values)
@@ -345,8 +353,6 @@ namespace Chetch.Arduino2
                 OnBeginADMsTimer(null, null);
 
             }
-
-            
         }
 
         private void OnBeginADMsTimer(Object sender, EventArgs earg)
@@ -361,6 +367,8 @@ namespace Chetch.Arduino2
                 int beginAttempts = 1;
                 do
                 {
+                    if (ServiceIsStopping) return;
+
                     try
                     {
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is starting up (attempt {1})...", adm.ID, beginAttempts);
@@ -381,7 +389,10 @@ namespace Chetch.Arduino2
                     }
                 } while (!admReadyToUse);
             }
-            _beginADMsTimer.Start();
+            if (!ServiceIsStopping)
+            {
+                _beginADMsTimer.Start();
+            }
         }
 
         protected ArduinoDeviceManager AddADM(ArduinoDeviceManager adm)

@@ -36,7 +36,7 @@ namespace Chetch.Arduino2.Devices.Electricity
         public float Voltage
         {
             get { return Get<float>(); }
-            internal set { Set(value, IsReady, IsReady); }
+            internal set { Set(value, IsReady, IsReady); } //Note: this will fire a property change even if no value change
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
