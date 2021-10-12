@@ -20,7 +20,7 @@ namespace Chetch.Arduino2.Devices.Electricity
             HZ = 2,
         }
 
-        public byte Pin { get; internal set; }
+        public AnalogPin Pin { get; internal set; }
 
         public int SampleSize { get; set; } = DEFAULT_SAMPLE_SIZE;
 
@@ -53,7 +53,7 @@ namespace Chetch.Arduino2.Devices.Electricity
             internal set { Set(value, IsReady); }
         }
 
-        public ZMPT101B(String id, byte pin, String name = DEFAULT_NAME) : base(id,name)
+        public ZMPT101B(String id, AnalogPin pin, String name = DEFAULT_NAME) : base(id,name)
         {
             Pin = pin;
             Category = DeviceCategory.VAC_SENSOR;
@@ -72,7 +72,7 @@ namespace Chetch.Arduino2.Devices.Electricity
         {
             base.AddConfig(message);
 
-            message.AddArgument(Pin);
+            message.AddArgument((byte)Pin);
             message.AddArgument(SampleSize);
             message.AddArgument(SampleInterval);
             message.AddArgument((byte)Targeting);

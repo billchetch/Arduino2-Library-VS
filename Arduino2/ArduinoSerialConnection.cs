@@ -12,6 +12,7 @@ namespace Chetch.Arduino2
         public const String BOARD_CH340 = "CH340";
         public const String BOARD_UNO = "Arduino Uno";
         public const String BOARD_MEGA = "Arduino Mega";
+        public const String BOARD_MEGA_CH340 = "CH340";
 
         public ArduinoSerialConnection(String portName, int baudRate) : base(portName, baudRate)
         {

@@ -217,6 +217,7 @@ namespace Chetch.Arduino2
             Thread.Sleep(sleep);
         }
 
+
         public void Connect(int timeout = -1)
         {
             if (Connecting) throw new InvalidOperationException("ADM is in the process of connecting");
