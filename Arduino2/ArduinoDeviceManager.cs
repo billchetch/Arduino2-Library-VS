@@ -89,6 +89,8 @@ namespace Chetch.Arduino2
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
+        public int InactivityTimeout { get; set; } = DEFAULT_INACTIVITY_TIMEOUT;
+
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
         public bool Connecting 
         {
@@ -792,7 +794,7 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > DEFAULT_INACTIVITY_TIMEOUT)
+            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > InactivityTimeout)
             {
                 try
                 {

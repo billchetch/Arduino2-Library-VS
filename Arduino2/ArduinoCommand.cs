@@ -37,6 +37,10 @@ namespace Chetch.Arduino2
             OFF,
             MOVE,
             ROTATE,
+            PRINT,
+            SET_CURSOR,
+            DISPLAY,
+            CLEAR,
         }
 
         public enum ParameterType
