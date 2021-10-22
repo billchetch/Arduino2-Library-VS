@@ -94,6 +94,13 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady); }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, 0)]
+        public int TimerTicks
+        {
+            get { return Get<int>(); }
+            internal set { Set(value, IsReady); }
+        }
+
         public bool IsReady => State == DeviceState.CONFIGURED;
 
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
@@ -176,6 +183,7 @@ namespace Chetch.Arduino2
         {
             message.AddArgument(Enabled);
             message.AddArgument(ReportInterval);
+            message.AddArgument(TimerTicks);
         }
 
         public void Configure()

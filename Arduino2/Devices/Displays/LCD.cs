@@ -34,6 +34,8 @@ namespace Chetch.Arduino2.Devices.Displays
             RegisterSelectPin = regSelectPin;
 
             AddCommand(ArduinoCommand.DeviceCommand.PRINT, ArduinoCommand.ParameterType.STRING);
+            AddCommand(ArduinoCommand.DeviceCommand.CLEAR);
+            AddCommand(ArduinoCommand.DeviceCommand.SET_CURSOR, ArduinoCommand.ParameterType.INT, ArduinoCommand.ParameterType.INT);
 
 
             Category = DeviceCategory.DISPLAY;
@@ -52,6 +54,16 @@ namespace Chetch.Arduino2.Devices.Displays
         public void Print(String str)
         {
             ExecuteCommand(ArduinoCommand.DeviceCommand.PRINT, str);
+        }
+
+        public void Clear()
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.CLEAR);
+        }
+
+        public void SetCursor(int x, int y)
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.SET_CURSOR, x, y);
         }
     }
 }

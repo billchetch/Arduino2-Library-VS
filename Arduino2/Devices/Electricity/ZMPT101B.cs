@@ -10,8 +10,7 @@ namespace Chetch.Arduino2.Devices.Electricity
     public class ZMPT101B : ArduinoDevice
     {
         public const String DEFAULT_NAME = "ZMPT101B";
-        public const int DEFAULT_SAMPLE_SIZE = 500;
-        public const int DEFAULT_SAMPLE_INTERVAL = 1000; //Note: IN MICROS!
+        public const int DEFAULT_SAMPLE_SIZE = 2000;
         
         public enum Target
         {
@@ -23,8 +22,6 @@ namespace Chetch.Arduino2.Devices.Electricity
         public AnalogPin Pin { get; internal set; }
 
         public int SampleSize { get; set; } = DEFAULT_SAMPLE_SIZE;
-
-        public int SampleInterval { get; set; } = DEFAULT_SAMPLE_INTERVAL;
 
         public Target Targeting { get; internal set; }  = Target.NONE;
         private int _targetValue = -1; //if < 0 then no stabalising is required
@@ -74,7 +71,6 @@ namespace Chetch.Arduino2.Devices.Electricity
 
             message.AddArgument((byte)Pin);
             message.AddArgument(SampleSize);
-            message.AddArgument(SampleInterval);
             message.AddArgument((byte)Targeting);
             message.AddArgument(_targetValue);
             message.AddArgument(_targetTolerance);

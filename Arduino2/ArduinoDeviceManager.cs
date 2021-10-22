@@ -179,7 +179,10 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public bool BoardConfigured { get; internal set; } = false;
-        
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public int BoardTimerHz { get; internal set; } = 0;
+
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -431,7 +434,7 @@ namespace Chetch.Arduino2
 
                         case MessageType.INITIALISE_RESPONSE:
                             State = ADMState.INITIALISED;
-                            AssignMessageValues(message, "BoardName", "BoardMaxDevices");
+                            AssignMessageValues(message, "BoardName", "BoardMaxDevices", "BoardTimerHz");
                             Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}", ID, BoardName, BoardMaxDevices);
                             if(_devices.Count > BoardMaxDevices)
                             {
@@ -598,6 +601,8 @@ namespace Chetch.Arduino2
                     return 0;
                 case "BoardMaxDevices":
                     return 1;
+                case "BoardTimerHz":
+                    return 2;
                 case "BoardMillis":
                     return 0;
                 case "BoardMemory":
