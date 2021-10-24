@@ -95,7 +95,7 @@ namespace Chetch.Arduino2
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, 0)]
-        public int TimerTicks
+        public int TimerInterval
         {
             get { return Get<int>(); }
             internal set { Set(value, IsReady); }
@@ -183,7 +183,7 @@ namespace Chetch.Arduino2
         {
             message.AddArgument(Enabled);
             message.AddArgument(ReportInterval);
-            message.AddArgument(TimerTicks);
+            message.AddArgument(TimerInterval);
         }
 
         public void Configure()

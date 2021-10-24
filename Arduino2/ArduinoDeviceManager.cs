@@ -38,6 +38,13 @@ namespace Chetch.Arduino2
             DEVICE_ERROR = 100,
         }
 
+        public enum AttachmentMode
+        {
+            NOT_SET = 0,
+            MASTER_SLAVE,
+            STANDALONE,
+        }
+
         public enum ADMState
         {
             CREATED = 1,
@@ -90,6 +97,8 @@ namespace Chetch.Arduino2
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
         public int InactivityTimeout { get; set; } = DEFAULT_INACTIVITY_TIMEOUT;
+
+        public AttachmentMode AttachMode { get; set; } = AttachmentMode.MASTER_SLAVE;
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
         public bool Connecting 
@@ -587,14 +596,6 @@ namespace Chetch.Arduino2
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
-            /*
-             * public enum MessageField
-        {
-            MILLIS = 0,
-            MEMORY,
-            DEVICE_COUNT,
-            IS_READY,
-        }*/
             switch (fieldName)
             {
                 case "BoardName":
@@ -627,6 +628,8 @@ namespace Chetch.Arduino2
 
             State = ADMState.INITIALISING;
             var message = CreateMessage(MessageType.INITIALISE);
+            message.AddArgument((byte)AttachMode);
+            message.AddArgument(DeviceCount);
             SendMessage(message);
         }
 
