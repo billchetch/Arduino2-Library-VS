@@ -445,6 +445,7 @@ namespace Chetch.Arduino2
                         case MessageType.ERROR:
                             ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
                             SetError("ADMErrorCode: " + errorCode.ToString(), "N/A");
+                            Tracing?.TraceEvent(TraceEventType.Error, 1500, "ADM {0} Message Type Error, code: {1}", ID, errorCode);
                             //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
                             //Console.WriteLine("---------------------------");
                             break;
