@@ -17,6 +17,9 @@ namespace Chetch.Arduino2.Devices.Motors
         public int LowerBound { get; set; } = 0;
         public int UpperBound { get; set; } = 180;
 
+        public int TrimFactor { get; set; } = 0;
+        public int RotationalSpeed { get; set; } = 300; //in degrees per second
+
         public ServoController(String id, byte pin, String name = DEFAULT_NAME) : base(id, name)
         {
             Pin = pin;
@@ -25,6 +28,7 @@ namespace Chetch.Arduino2.Devices.Motors
             AddCommand(ArduinoCommand.DeviceCommand.MOVE, ArduinoCommand.ParameterType.INT);
             AddCommand(ArduinoCommand.DeviceCommand.ROTATE, ArduinoCommand.ParameterType.INT);
         }
+    
 
         protected override void AddConfig(ADMMessage message)
         {
@@ -34,6 +38,8 @@ namespace Chetch.Arduino2.Devices.Motors
             message.AddArgument(Position);
             message.AddArgument(LowerBound);
             message.AddArgument(UpperBound);
+            message.AddArgument(TrimFactor);
+            message.AddArgument(RotationalSpeed);
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)

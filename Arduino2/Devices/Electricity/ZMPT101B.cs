@@ -11,7 +11,7 @@ namespace Chetch.Arduino2.Devices.Electricity
     {
         public const String DEFAULT_NAME = "ZMPT101B";
         public const int DEFAULT_SAMPLE_SIZE = 2000;
-        public const int DEFAULT_TIMER_INTERVAL = 250;
+        public const int DEFAULT_TIMER_INTERVAL = 250; //in microseconds
         
         public enum Target
         {

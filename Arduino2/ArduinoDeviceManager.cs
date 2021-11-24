@@ -30,6 +30,7 @@ namespace Chetch.Arduino2
             MESSAGE_FRAME_ERROR = 10,
             ADM_MESSAGE_ERROR = 11,
             ADM_MESSAGE_IS_EMPTY= 12,
+            ADM_FAILED_TO_INITIALISE = 13,
             NO_DEVICE_ID = 20,
             DEVICE_LIMIT_REACHED = 21,
             DEVICE_ID_ALREADY_USED = 22,
@@ -42,7 +43,15 @@ namespace Chetch.Arduino2
         {
             NOT_SET = 0,
             MASTER_SLAVE,
-            STANDALONE,
+            OBSERVER_OBSERVED,
+        }
+
+        public enum  AnalogReference
+        {
+            AREF_EXTERNAL = 0,
+            AREF_INTERNAL,
+            AREF_INTERNAL1V1, //mega only
+            AREF_INTERNAL2V56, //mega only
         }
 
         public enum ADMState
@@ -99,6 +108,8 @@ namespace Chetch.Arduino2
         public int InactivityTimeout { get; set; } = DEFAULT_INACTIVITY_TIMEOUT;
 
         public AttachmentMode AttachMode { get; set; } = AttachmentMode.MASTER_SLAVE;
+
+        public AnalogReference AREF { get; set; } = AnalogReference.AREF_INTERNAL;
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
         public bool Connecting 
@@ -176,7 +187,7 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public int BoardMaxDevices { get; internal set; } = 0;
 
-        //Board properties (assigned by return message from RequestStatus)
+        //Board specified properties (assigned by return message from Initialise or RequestStatus)
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public long BoardMillis { get; internal set; } = 0;
 
@@ -188,9 +199,6 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public bool BoardConfigured { get; internal set; } = false;
-
-        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
-        public int BoardTimerHz { get; internal set; } = 0;
 
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
@@ -442,9 +450,21 @@ namespace Chetch.Arduino2
                             break;
 
                         case MessageType.INITIALISE_RESPONSE:
+                            //copy some values for compairson
+                            AttachmentMode am = AttachMode;
+                            AnalogReference ar = AREF;
+                            AssignMessageValues(message, "BoardName", "BoardMaxDevices", "AttachMode", "AREF");
+                            if(am != AttachMode)
+                            {
+                                throw new Exception(String.Format("{0} ADM has attachment mode {1} but board attachment mode is {2}", ID, am, AttachMode));
+                            }
+                            if (ar != AREF)
+                            {
+                                throw new Exception(String.Format("{0} ADM has AREF {1} but board AREF is {2}", ID, ar, AREF));
+                            }
+
                             State = ADMState.INITIALISED;
-                            AssignMessageValues(message, "BoardName", "BoardMaxDevices", "BoardTimerHz");
-                            Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}", ID, BoardName, BoardMaxDevices);
+                            Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}, Attachmetn mode {3}, AREF {4}", ID, BoardName, BoardMaxDevices, AttachMode, AREF);
                             if(_devices.Count > BoardMaxDevices)
                             {
                                 throw new Exception(String.Format("{0} ADM has {1} devices but board {2} only supports {3} devices", ID, _devices.Count, BoardName, BoardMaxDevices));
@@ -460,11 +480,21 @@ namespace Chetch.Arduino2
                             //now initialise all devices
                             if (!IsEmpty)
                             {
+                                
+
                                 State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
                                 foreach (var dev in _devices.Values)
                                 {
-                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
-                                    dev.Initialise();
+                                    if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
+                                    {
+                                        Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} attached as observer so requesting status of device {1}", ID, dev.ID);
+                                        dev.RequestStatus(); //this will send a status request
+                                    }
+                                    else
+                                    {
+                                        Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
+                                        dev.Initialise();
+                                    }
                                     //Thread.Sleep(500);
                                 }
                             }
@@ -519,6 +549,7 @@ namespace Chetch.Arduino2
                     {
                         case MessageType.INITIALISE_RESPONSE:
                         case MessageType.CONFIGURE_RESPONSE:
+                        case MessageType.STATUS_RESPONSE: //if attachmode is observer
                             ArduinoDevice.DeviceState devState = dev.State;
                             bool allOfSameState = true;
                             foreach (var d in _devices.Values)
@@ -602,8 +633,6 @@ namespace Chetch.Arduino2
                     return 0;
                 case "BoardMaxDevices":
                     return 1;
-                case "BoardTimerHz":
-                    return 2;
                 case "BoardMillis":
                     return 0;
                 case "BoardMemory":
@@ -616,7 +645,13 @@ namespace Chetch.Arduino2
                     return 4;
                 case "ErrorCode":
                     return 0;
-                
+                case "AttachMode":
+                    return 2;
+                case "AREF":
+                    return 3;
+
+
+
                 default:
                     throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
             }
@@ -630,6 +665,7 @@ namespace Chetch.Arduino2
             var message = CreateMessage(MessageType.INITIALISE);
             message.AddArgument((byte)AttachMode);
             message.AddArgument(DeviceCount);
+            message.AddArgument((byte)AREF);
             SendMessage(message);
         }
 

@@ -164,7 +164,7 @@ namespace Chetch.Arduino2
         {
             ADM.SendMessage(message);
         }
-
+        
         virtual protected void AddInit(ADMMessage message)
         {
             message.AddArgument(Name == null ? "N/A" : Name);
@@ -193,7 +193,7 @@ namespace Chetch.Arduino2
             AddConfig(message);
             SendMessage(message);
         }
-
+        
         virtual public void RequestStatus()
         {
             var message = CreateMessage(MessageType.STATUS_REQUEST);
@@ -246,6 +246,10 @@ namespace Chetch.Arduino2
 
                 case MessageType.STATUS_RESPONSE:
                     AssignMessageValues(message, "Enabled", "ReportInterval");
+                    if(ADM.AttachMode == ArduinoDeviceManager.AttachmentMode.OBSERVER_OBSERVED && State != DeviceState.CONFIGURED)
+                    {
+                        State = DeviceState.CONFIGURED;
+                    }
                     break;
             }
 
@@ -282,8 +286,13 @@ namespace Chetch.Arduino2
 
         protected ArduinoCommand GetCommand(String alias)
         {
-            alias = alias.Trim().ToLower();
+            alias = alias.Trim().ToLower().Replace('_','-');
             return _commands.ContainsKey(alias) ? _commands[alias] : null;
+        }
+
+        protected ArduinoCommand GetCommand(ArduinoCommand.DeviceCommand command)
+        {
+            return GetCommand(command.ToString());
         }
 
         private Task _executeCommandTask = null;
