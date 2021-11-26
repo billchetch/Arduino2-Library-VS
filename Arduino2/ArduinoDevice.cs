@@ -32,7 +32,7 @@ namespace Chetch.Arduino2
             SWITCH = 9,
             SERVO = 10,
             MOTOR = 11,
-            DISPLAY = 12,
+            LCD = 12,
         }
 
         public enum DeviceState

@@ -38,7 +38,7 @@ namespace Chetch.Arduino2.Devices.Displays
             AddCommand(ArduinoCommand.DeviceCommand.SET_CURSOR, ArduinoCommand.ParameterType.INT, ArduinoCommand.ParameterType.INT);
 
 
-            Category = DeviceCategory.DISPLAY;
+            Category = DeviceCategory.LCD;
         }
 
         protected override void AddConfig(ADMMessage message)

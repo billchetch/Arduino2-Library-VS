@@ -31,6 +31,7 @@ namespace Chetch.Arduino2
             ADM_MESSAGE_ERROR = 11,
             ADM_MESSAGE_IS_EMPTY= 12,
             ADM_FAILED_TO_INITIALISE = 13,
+            ADM_FAILED_TO_CONFIUGRE = 14,
             NO_DEVICE_ID = 20,
             DEVICE_LIMIT_REACHED = 21,
             DEVICE_ID_ALREADY_USED = 22,
@@ -477,25 +478,18 @@ namespace Chetch.Arduino2
 
                         case MessageType.CONFIGURE_RESPONSE:
                             State = ADMState.CONFIGURED;
-                            
-                            //now initialise all devices
-                            if (!IsEmpty)
-                            {
-                                
 
+                            if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
+                            {
+                                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} attached as observer so requesting status", ID);
+                                RequestStatus(); //this will send a status request message
+                            } else if (!IsEmpty)
+                            {
                                 State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
                                 foreach (var dev in _devices.Values)
                                 {
-                                    if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
-                                    {
-                                        Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} attached as observer so requesting status of device {1}", ID, dev.ID);
-                                        dev.RequestStatus(); //this will send a status request
-                                    }
-                                    else
-                                    {
-                                        Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
-                                        dev.Initialise();
-                                    }
+                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
+                                    dev.Initialise();
                                     //Thread.Sleep(500);
                                 }
                             }
@@ -521,6 +515,20 @@ namespace Chetch.Arduino2
                                     {
                                         Synchronised = true;
                                     }
+                                }
+                            } else if(AttachMode == AttachmentMode.OBSERVER_OBSERVED)
+                            {
+                                int n = GetMessageValue<int>("DeviceCount", message);
+                                if (n != _devices.Count)
+                                {
+                                    throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
+                                }
+
+                                //We have same number of devices in this ADM as in board so let's get the status of each device as this will set it's state upon return (see ArduinoDevice::HandleMesssage)
+                                foreach(var d in _devices.Values)
+                                {
+                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} device {1} requesting status", ID, d.ID);
+                                    d.RequestStatus();
                                 }
                             }
                             break;
