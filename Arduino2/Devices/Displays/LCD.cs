@@ -36,7 +36,7 @@ namespace Chetch.Arduino2.Devices.Displays
             AddCommand(ArduinoCommand.DeviceCommand.PRINT, ArduinoCommand.ParameterType.STRING);
             AddCommand(ArduinoCommand.DeviceCommand.CLEAR);
             AddCommand(ArduinoCommand.DeviceCommand.SET_CURSOR, ArduinoCommand.ParameterType.INT, ArduinoCommand.ParameterType.INT);
-
+            AddCommand(ArduinoCommand.DeviceCommand.RESET);
 
             Category = DeviceCategory.LCD;
         }
@@ -64,6 +64,11 @@ namespace Chetch.Arduino2.Devices.Displays
         public void SetCursor(int x, int y)
         {
             ExecuteCommand(ArduinoCommand.DeviceCommand.SET_CURSOR, x, y);
+        }
+
+        public void Reset()
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.RESET);
         }
     }
 }

@@ -497,6 +497,7 @@ namespace Chetch.Arduino2
 
                         case MessageType.STATUS_RESPONSE:
                             AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
+                            Console.WriteLine(">>> Memory: {0}", BoardMemory);
                             if (IsDeviceReady)
                             {
                                 int n = GetMessageValue<int>("DeviceCount", message);
@@ -806,14 +807,18 @@ namespace Chetch.Arduino2
 
         public void End(int timeout = -1)
         {
-            try
+            if (AttachMode != AttachmentMode.OBSERVER_OBSERVED)
             {
-                var message = CreateMessage(MessageType.RESET);
-                SendMessage(message);
-                wait(100);
-            } catch (Exception e)
-            {
-                Tracing?.TraceEvent(TraceEventType.Error, 2000, "{0} ", ID, e.Message);
+                try
+                {
+                    var message = CreateMessage(MessageType.RESET);
+                    SendMessage(message);
+                    wait(100);
+                }
+                catch (Exception e)
+                {
+                    Tracing?.TraceEvent(TraceEventType.Error, 2000, "{0} ", ID, e.Message);
+                }
             }
 
             while (Connecting || Synchronising)
