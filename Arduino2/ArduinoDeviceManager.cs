@@ -497,7 +497,7 @@ namespace Chetch.Arduino2
 
                         case MessageType.STATUS_RESPONSE:
                             AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
-                            Console.WriteLine(">>> Memory: {0}", BoardMemory);
+                            //Console.WriteLine(">>> Memory: {0}", BoardMemory);
                             if (IsDeviceReady)
                             {
                                 int n = GetMessageValue<int>("DeviceCount", message);
