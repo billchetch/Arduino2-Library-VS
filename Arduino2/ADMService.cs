@@ -97,6 +97,7 @@ namespace Chetch.Arduino2
         }
 
         protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
+        protected const int BEGIN_TIMEOUT = 8000;
         protected const int MAX_BEGIN_ATTEMPTS = 3;
         protected const int DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL = 30 * 1000;
         
@@ -372,7 +373,7 @@ namespace Chetch.Arduino2
                     try
                     {
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is starting up (attempt {1})...", adm.ID, beginAttempts);
-                        adm.Begin(8000);
+                        adm.Begin(BEGIN_TIMEOUT);
                         admReadyToUse = true;
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is ready for use", adm.ID);
                     }
