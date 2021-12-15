@@ -71,7 +71,7 @@ namespace Chetch.Arduino2
         public byte BoardID { get; internal set; }
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
-        public DeviceCategory Category { get; internal set; }
+        public DeviceCategory Category { get; protected set; }
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, DeviceState.CREATED)]
         public DeviceState State
