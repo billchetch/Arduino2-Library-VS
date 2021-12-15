@@ -60,7 +60,6 @@ namespace Chetch.Arduino2
 
         public ArduinoDeviceManager ADM { get; set; }
 
-
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         override public String UID => ADM.ID + ":" + ID;
 
