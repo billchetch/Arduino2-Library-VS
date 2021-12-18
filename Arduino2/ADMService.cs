@@ -45,7 +45,7 @@ namespace Chetch.Arduino2
                     foreach (ArduinoDeviceManager adm in adms.Values)
                     {
                         Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                       var properties = adm.GetProperties(AO_ATTRIBUTE_FLAGS);
+                        var properties = adm.GetProperties(AO_ATTRIBUTE_FLAGS);
                         foreach (var p in properties)
                         {
                             vals[p.Name] = p.GetValue(adm);
