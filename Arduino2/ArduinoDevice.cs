@@ -255,11 +255,6 @@ namespace Chetch.Arduino2
             base.HandleMessage(message);
         }
 
-        virtual protected void HandleError(ADMMessage message)
-        {
-
-        }
-
         public ArduinoCommand AddCommand(ArduinoCommand cmd)
         {
             String alias = cmd.Alias;
