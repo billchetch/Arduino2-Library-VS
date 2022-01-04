@@ -58,6 +58,14 @@ namespace Chetch.Arduino2
             A9,
         }
 
+        public enum InterruptMode
+        {
+            NONE = 0,
+            CHANGE = 1,
+            FALLING = 2,
+            RISING = 3,
+        }
+
         public ArduinoDeviceManager ADM { get; set; }
 
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
