@@ -101,12 +101,6 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady); }
         }
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE, 0)]
-        public int TimerInterval
-        {
-            get { return Get<int>(); }
-            internal set { Set(value, IsReady); }
-        }
 
         public bool IsReady => State == DeviceState.CONFIGURED;
 
@@ -190,7 +184,6 @@ namespace Chetch.Arduino2
         {
             message.AddArgument(Enabled);
             message.AddArgument(ReportInterval);
-            message.AddArgument(TimerInterval);
         }
 
         public void Configure()
