@@ -234,6 +234,11 @@ namespace Chetch.Arduino2
             base.OnStop();
         }
 
+        virtual protected bool CanLogToSnapshot(ArduinoObject ao, String propertyName)
+        {
+            return true;
+        }
+
         virtual protected void OnLogSnapshotTimer(Object sender, EventArgs earg)
         {
             foreach (var adm in _adms.Values)
@@ -246,13 +251,21 @@ namespace Chetch.Arduino2
                     /*var properties = ao.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
                     foreach(var p in properties)
                     {
-                        ServiceDB.LogSnapshot(ao.UID, p, ao.Get<Object>(p));
+                        if(CanLogToSnapshot(ao, p))
+                        {
+                            ServiceDB.LogSnapshot(ao.UID, p, ao.Get<Object>(p));
+                        }
                     }*/
                 }
             }
         }
 
-        //loggging
+        virtual protected bool CanLogEvent(ArduinoObject ao, String eventName)
+        {
+            return true;
+        }
+
+        //loggging events
         protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
             //Get Event data
@@ -261,7 +274,7 @@ namespace Chetch.Arduino2
             ArduinoObject.ArduinoPropertyAttribute propertyAttribute = (ArduinoObject.ArduinoPropertyAttribute)ao.GetPropertyAttribute(dsoArgs.PropertyName);
             
             //First we deal with a state change (i.e. an Event)
-            if (propertyAttribute.IsState || propertyAttribute.IsError)
+            if ((propertyAttribute.IsState || propertyAttribute.IsError) && CanLogEvent(ao, dsoArgs.PropertyName))
             {
                 String eventName = dsoArgs.PropertyName;
                 String eventInfo;

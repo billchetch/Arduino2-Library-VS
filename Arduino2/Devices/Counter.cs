@@ -13,6 +13,10 @@ namespace Chetch.Arduino2.Devices
 
         public byte Pin { get; internal set; }
 
+        public InterruptMode IMode { get; internal set; }
+
+        public uint Tolerance { get; set; } = 0;
+
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public uint Count
         {
@@ -20,9 +24,12 @@ namespace Chetch.Arduino2.Devices
             internal set { Set(value, IsReady); }
         }
 
-        public InterruptMode IMode { get; internal set; }
+        public double CountPerSecond
+        {
+            get { return Get<double>(); }
+            internal set { Set(value, IsReady); }
+        }
 
-        public uint Tolerance { get; set; } = 0;
 
         public Counter(String id, byte pin, InterruptMode imode, String name = DEFAULT_NAME) : base(id, name)
         {
@@ -61,9 +68,18 @@ namespace Chetch.Arduino2.Devices
             switch (message.Type)
             {
                 case MessageType.DATA:
+                    uint count = GetMessageValue<uint>("Count", message);
+                    ulong duration = GetMessageValue<ulong>("Duration", message); //in micros
+                    if(Tolerance > 0)
+                    {
+                        duration = (ulong)Math.Round((double)duration / (double)Tolerance) * Tolerance;
+                    }
+
+                    //so we set standard rate here
+                    CountPerSecond = (1000000.0 / duration) * count;
+                    
                     AssignMessageValues(message, "Count");
-                    ulong duration = GetMessageValue<ulong>("Duration", message);
-                    Console.WriteLine("Count {0}, Duration {1}", Count, duration);
+                    Console.WriteLine("Count {0}, Duration {1}, CPS {2}", Count, duration, CountPerSecond);
                     break;
 
                 case MessageType.CONFIGURE_RESPONSE:
