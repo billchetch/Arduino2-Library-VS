@@ -79,7 +79,7 @@ namespace Chetch.Arduino2.Devices
                     CountPerSecond = (1000000.0 / duration) * count;
                     
                     AssignMessageValues(message, "Count");
-                    Console.WriteLine("Count {0}, Duration {1}, CPS {2}", Count, duration, CountPerSecond);
+                    Console.WriteLine("{0}: Count {1}, Duration {2}, CPS {3}", UID, Count, duration, CountPerSecond);
                     break;
 
                 case MessageType.CONFIGURE_RESPONSE:
