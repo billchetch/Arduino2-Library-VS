@@ -81,9 +81,6 @@ namespace Chetch.Arduino2.Devices
                     AssignMessageValues(message, "Count");
                     Console.WriteLine("{0}: Count {1}, Duration {2}, CPS {3}", UID, Count, duration, CountPerSecond);
                     break;
-
-                case MessageType.CONFIGURE_RESPONSE:
-                    break;
             }
 
             base.HandleMessage(message);

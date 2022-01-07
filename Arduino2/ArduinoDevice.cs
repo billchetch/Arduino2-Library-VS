@@ -180,6 +180,11 @@ namespace Chetch.Arduino2
             SendMessage(message);
         }
 
+        virtual protected void OnInitialised(ADMMessage message)
+        {
+            //a hook
+        }
+
         virtual protected void AddConfig(ADMMessage message)
         {
             message.AddArgument(Enabled);
@@ -194,6 +199,11 @@ namespace Chetch.Arduino2
             SendMessage(message);
         }
         
+        virtual protected void OnConfigured(ADMMessage message)
+        {
+            //a hook
+        }
+
         virtual public void RequestStatus()
         {
             var message = CreateMessage(MessageType.STATUS_REQUEST);
@@ -232,11 +242,13 @@ namespace Chetch.Arduino2
 
                 case MessageType.INITIALISE_RESPONSE:
                     State = DeviceState.INITIALISED;
+                    OnInitialised(message);
                     Configure();
                     break;
 
                 case MessageType.CONFIGURE_RESPONSE:
                     State = DeviceState.CONFIGURED;
+                    OnConfigured(message);
                     break;
 
                 case MessageType.COMMAND_RESPONSE:

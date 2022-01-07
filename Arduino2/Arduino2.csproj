@@ -78,6 +78,7 @@
     <Compile Include="Devices\Electricity\ZMPT101B.cs" />
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
+    <Compile Include="Devices\Temperature\DS18B20Array.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
