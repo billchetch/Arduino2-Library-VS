@@ -350,7 +350,7 @@ namespace Chetch.Arduino2
             ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
-        protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<Object> parameters = null)
+        virtual protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<Object> parameters = null)
         {
             for (int i = 0; i < cmd.Repeat; i++)
             {

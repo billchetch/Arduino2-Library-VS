@@ -41,6 +41,7 @@ namespace Chetch.Arduino2
             SET_CURSOR,
             DISPLAY,
             CLEAR,
+            SILENCE,
         }
 
         public enum ParameterType

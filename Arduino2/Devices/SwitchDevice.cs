@@ -35,6 +35,9 @@ namespace Chetch.Arduino2.Devices
             internal set { Set(value, IsReady); }
         }
 
+        public bool IsOn => Position == SwitchPosition.ON;
+        public bool IsOff => Position == SwitchPosition.OFF;
+
         private bool _pinState;
         public bool PinState 
         { 
@@ -46,6 +49,8 @@ namespace Chetch.Arduino2.Devices
             } 
         }
 
+        private System.Timers.Timer durationTimer = null;
+        
         public byte Pin { get; internal set; }
 
         public int Tolerance { get; internal set; } = 0;
@@ -99,13 +104,30 @@ namespace Chetch.Arduino2.Devices
             base.HandleMessage(message);
         }
 
-        public void SetPosition(SwitchPosition newPosition)
+        public void SetPosition(SwitchPosition newPosition, int duration = 0)
         {
             if (IsPassive)
             {
                 throw new InvalidOperationException(String.Format("Cannot set position of switch device {0} because it not an active switch", ID));
             }
 
+            if(duration > 0 && newPosition != Position)
+            {
+                if(durationTimer == null)
+                {
+                    durationTimer = new System.Timers.Timer();
+                    durationTimer.AutoReset = false;
+                    durationTimer.Interval = duration;
+                    durationTimer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => { 
+                        SetPosition(Position);
+                    };
+                } else
+                {
+                    durationTimer.Stop();
+                }
+                //durationTimerElapsedPosition = Position;
+                durationTimer.Start();
+            }
             switch (newPosition)
             {
                 case SwitchPosition.ON:
@@ -118,6 +140,17 @@ namespace Chetch.Arduino2.Devices
             
         }
 
+        public void TurnOn(int duration = 0)
+        {
+            SetPosition(SwitchPosition.ON, duration);
+        }
+
+        public void TurnOff(int duration = 0)
+        {
+            SetPosition(SwitchPosition.OFF, duration);
+        }
+
+        
         protected override void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             switch(deviceCommand)
