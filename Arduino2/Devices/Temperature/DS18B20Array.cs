@@ -35,6 +35,11 @@ namespace Chetch.Arduino2.Devices.Temperature
         public BitResolution Resolution { get; internal set; }
 
         public List<Sensor> Sensors = new List<Sensor>();
+        public bool TemperaturesUpdated
+        {
+            get { return Get<bool>(); }
+            internal set { Set(value, IsReady, IsReady); } //trigger by assignment even
+        }
 
         public DS18B20Array(String id, byte pin, BitResolution resolution, String name = DEFAULT_NAME) : base(id, name)
         {
@@ -101,9 +106,10 @@ namespace Chetch.Arduino2.Devices.Temperature
                     {
                         int idx = i;
                         float temp = message.GetArgument<float>(idx);
-                        Console.WriteLine("T: {0}", temp);
+                        //Console.WriteLine("T: {0}", temp);
                         Sensors[i].Temperature = temp;
                     }
+                    TemperaturesUpdated = true;
                     break;
             }
 
