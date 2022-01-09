@@ -92,7 +92,6 @@ namespace Chetch.Arduino2
                 UpdateTotals();
             }
         }
-
         public int TotalDelayInterval { get; internal set; } = 0;
 
         public ArduinoCommand(DeviceCommand command, String alias = null, List<ParameterType> parameterTypes  = null)
