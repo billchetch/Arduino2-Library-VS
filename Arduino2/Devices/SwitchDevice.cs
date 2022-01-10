@@ -118,8 +118,9 @@ namespace Chetch.Arduino2.Devices
                     durationTimer = new System.Timers.Timer();
                     durationTimer.AutoReset = false;
                     durationTimer.Interval = duration;
+                    SwitchPosition set2position = Position;
                     durationTimer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => { 
-                        SetPosition(Position);
+                        SetPosition(set2position);
                     };
                 } else
                 {

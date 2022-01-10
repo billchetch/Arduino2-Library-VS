@@ -27,7 +27,7 @@ namespace Chetch.Arduino2.Devices.Buzzers
                 } else
                 {
                     int duration = parameters != null && parameters.Count == 1 ? (int)parameters[0] : DefaultSilenceDuration;
-                    TurnOff(duration);
+                    if(duration > 0)TurnOff(duration);
                 }
             } 
             else
