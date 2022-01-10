@@ -89,6 +89,11 @@ namespace Chetch.Arduino2
             adm.ID = ports[0];
             return adm;
         }
+
+        //Usually a single board will register itself as a unique service using the 'hostname' of the board connection as the service
+        //So for example if the hostname of the board as connected to wifi is 'unohost' then there will be a corresponding service called
+        //'unohost' registered with the network service.  The ArduinoTCPConnection will then attempt to find that service and make a connection
+        //thereby connecting to the board 'unohost'
         public static ArduinoDeviceManager Create(String serviceName, String networkServiceURL, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
             var cnn = new ArduinoTCPConnection(serviceName, networkServiceURL);

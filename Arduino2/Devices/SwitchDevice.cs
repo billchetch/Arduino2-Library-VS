@@ -70,6 +70,9 @@ namespace Chetch.Arduino2.Devices
             }
         }
 
+        public SwitchDevice(String id, SwitchMode mode, byte pin, int tolerance, String name = DEFAULT_NAME) : this(id, mode, pin, SwitchPosition.OFF, tolerance, name)
+        {}
+
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
             switch (fieldName)
