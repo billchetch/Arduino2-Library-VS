@@ -32,7 +32,11 @@ namespace Chetch.Arduino2.Devices
         public SwitchPosition Position 
         {
             get { return Get<SwitchPosition>(); }
-            internal set { Set(value, IsReady); }
+            internal set 
+            {
+                if (IsReady && value != Position) Switched?.Invoke(this, value);
+                Set(value, IsReady); 
+            }
         }
 
         public bool IsOn => Position == SwitchPosition.ON;
@@ -54,6 +58,8 @@ namespace Chetch.Arduino2.Devices
         public byte Pin { get; internal set; }
 
         public int Tolerance { get; internal set; } = 0;
+
+        public event EventHandler<SwitchPosition> Switched;
 
         public SwitchDevice(String id, SwitchMode mode, byte pin, SwitchPosition intialPosition = SwitchPosition.OFF, int tolerance = 0, String name = DEFAULT_NAME) : base(id, name)
         {
