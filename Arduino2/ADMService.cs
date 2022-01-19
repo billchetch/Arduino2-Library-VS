@@ -16,9 +16,8 @@ namespace Chetch.Arduino2
 {
     abstract public class ADMService : TCPMessagingClient
     {
-        class MessageSchema : Chetch.Messaging.MessageSchema
+        public class MessageSchema : Chetch.Messaging.MessageSchema
         {
-
             public const String ADM_FIELD_NAME_PREFIX = "ADM";
             public const String DEVICE_FIELD_NAME_PREFIX = "Device";
             public const String DEVICE_GROUP_FIELD_NAME_PREFIX = "DeviceGroup";
@@ -37,6 +36,8 @@ namespace Chetch.Arduino2
             public MessageSchema() { }
 
             public MessageSchema(Message message) : base(message) { }
+
+            public MessageSchema(MessageType messageType) : base(messageType) { }
 
             public void AddADMs(Dictionary<String, ArduinoDeviceManager> adms)
             {
