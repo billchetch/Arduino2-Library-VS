@@ -54,6 +54,7 @@ namespace Chetch.Arduino2.Devices
         }
 
         private System.Timers.Timer durationTimer = null;
+        private SwitchPosition durationElapsedPosition;
         
         public byte Pin { get; internal set; }
 
@@ -84,7 +85,7 @@ namespace Chetch.Arduino2.Devices
             switch (fieldName)
             {
                 case "PinState":
-                    return message.IsConfigRelated ? 4 : (message.IsCommandRelated? 1 : 0);
+                    return message.IsConfigRelated ? 4 : (message.IsCommandRelated ? 1 : 0);
                
                 default:
                     return base.GetArgumentIndex(fieldName, message);
@@ -113,7 +114,12 @@ namespace Chetch.Arduino2.Devices
             base.HandleMessage(message);
         }
 
-        public void SetPosition(SwitchPosition newPosition, int duration = 0)
+        private void OnDurationElapsed (object sender, System.Timers.ElapsedEventArgs e) 
+        { 
+            SetPosition(durationElapsedPosition);
+        }
+
+        virtual public void SetPosition(SwitchPosition newPosition, int duration = 0)
         {
             if (IsPassive)
             {
@@ -126,18 +132,16 @@ namespace Chetch.Arduino2.Devices
                 {
                     durationTimer = new System.Timers.Timer();
                     durationTimer.AutoReset = false;
-                    durationTimer.Interval = duration;
-                    SwitchPosition set2position = Position;
-                    durationTimer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => { 
-                        SetPosition(set2position);
-                    };
+                    durationTimer.Elapsed += OnDurationElapsed;
                 } else
                 {
                     durationTimer.Stop();
                 }
-                //durationTimerElapsedPosition = Position;
+                durationTimer.Interval = duration;
+                durationElapsedPosition = Position;
                 durationTimer.Start();
             }
+
             switch (newPosition)
             {
                 case SwitchPosition.ON:
@@ -149,6 +153,7 @@ namespace Chetch.Arduino2.Devices
             }
             
         }
+
 
         public void TurnOn(int duration = 0)
         {
