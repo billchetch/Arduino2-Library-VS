@@ -53,9 +53,12 @@ namespace Chetch.Arduino2.Devices
             } 
         }
 
-        private System.Timers.Timer durationTimer = null;
-        private SwitchPosition durationElapsedPosition;
-        
+        private System.Timers.Timer _durationTimer = null;
+        private SwitchPosition _durationElapsedPosition;
+        private readonly Object _durationTimerLock = new Object();
+        private bool _durationTimerCancelled = false;
+
+
         public byte Pin { get; internal set; }
 
         public int Tolerance { get; internal set; } = 0;
@@ -69,6 +72,10 @@ namespace Chetch.Arduino2.Devices
             PinState = (intialPosition == SwitchPosition.ON);
             Tolerance = tolerance;
             Category = DeviceCategory.SWITCH;
+
+            _durationTimer = new System.Timers.Timer();
+            _durationTimer.AutoReset = false;
+            _durationTimer.Elapsed += OnDurationElapsed;
 
             if (Mode == SwitchMode.ACTIVE)
             { 
@@ -115,8 +122,13 @@ namespace Chetch.Arduino2.Devices
         }
 
         private void OnDurationElapsed (object sender, System.Timers.ElapsedEventArgs e) 
-        { 
-            SetPosition(durationElapsedPosition);
+        {
+            lock (_durationTimerLock)
+            {
+                if (_durationTimerCancelled) return;
+            }
+
+            SetPosition(_durationElapsedPosition);
         }
 
         virtual public void SetPosition(SwitchPosition newPosition, int duration = 0)
@@ -126,21 +138,30 @@ namespace Chetch.Arduino2.Devices
                 throw new InvalidOperationException(String.Format("Cannot set position of switch device {0} because it not an active switch", ID));
             }
 
-            if(duration > 0 && newPosition != Position)
+            lock (_durationTimerLock)
             {
-                if(durationTimer == null)
+                _durationTimerCancelled = true;
+                _durationTimer.Stop();
+
+                if (duration != 0)
                 {
-                    durationTimer = new System.Timers.Timer();
-                    durationTimer.AutoReset = false;
-                    durationTimer.Elapsed += OnDurationElapsed;
-                } else
-                {
-                    durationTimer.Stop();
+                    if (duration < 0)
+                    {
+                        _durationTimer.Interval = -duration;
+                        _durationElapsedPosition = newPosition;
+                        _durationTimerCancelled = false;
+                        _durationTimer.Start();
+                        return;
+                    } else
+                    {
+                        _durationTimer.Interval = duration;
+                        _durationElapsedPosition = Position;
+                        _durationTimerCancelled = false;
+                        _durationTimer.Start();
+                    }
                 }
-                durationTimer.Interval = duration;
-                durationElapsedPosition = Position;
-                durationTimer.Start();
             }
+
 
             switch (newPosition)
             {

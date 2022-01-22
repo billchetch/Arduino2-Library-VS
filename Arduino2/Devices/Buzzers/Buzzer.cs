@@ -33,8 +33,8 @@ namespace Chetch.Arduino2.Devices.Buzzers
                     int duration = parameters != null && parameters.Count == 1 ? (int)parameters[0] : DefaultSilenceDuration;
                     if (duration > 0)
                     {
-                        silenced = true;
                         TurnOff(duration);
+                        silenced = true;
                     }
                 }
             } 
@@ -44,10 +44,24 @@ namespace Chetch.Arduino2.Devices.Buzzers
             }
         }
 
+        public void Silence(int duration = 0)
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.SILENCE, duration);
+        }
+
+        public void Unsilence()
+        {
+            if (silenced)
+            {
+                TurnOn();
+            }
+        }
+
         public override void SetPosition(SwitchPosition newPosition, int duration = 0)
         {
             base.SetPosition(newPosition, duration);
-            if (newPosition == SwitchPosition.ON) silenced = false;
+            
+            silenced = false;
         }
     }
 }
