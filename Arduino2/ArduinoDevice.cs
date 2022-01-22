@@ -210,6 +210,11 @@ namespace Chetch.Arduino2
             SendMessage(message);
         }
 
+        virtual protected void OnStatusResponse(ADMMessage message)
+        {
+            //a hook
+        }
+
         override public void HandleMessage(ADMMessage message)
         {   
             switch (message.Type)
@@ -262,6 +267,7 @@ namespace Chetch.Arduino2
                     {
                         State = DeviceState.CONFIGURED;
                     }
+                    OnStatusResponse(message);
                     break;
             }
 
