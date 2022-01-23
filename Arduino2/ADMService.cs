@@ -15,7 +15,6 @@ using Chetch.Utilities;
 namespace Chetch.Arduino2
 {
     [System.ComponentModel.DesignerCategory("Code")]
-
     abstract public class ADMService : TCPMessagingClient
     {
         public class MessageSchema : Chetch.Messaging.MessageSchema
