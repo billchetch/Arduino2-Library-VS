@@ -302,7 +302,7 @@ namespace Chetch.Arduino2
             }
 
             //now we dispatch a message to any subscribers to the service
-            if (propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsError)
+            if (propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsMetaData || propertyAttribute.IsError)
             {
                 var message = new Message(propertyAttribute.IsError ? MessageType.ERROR : MessageType.DATA);
                 var schema = new MessageSchema(message);
