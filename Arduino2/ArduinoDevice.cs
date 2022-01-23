@@ -95,20 +95,20 @@ namespace Chetch.Arduino2
         }
 
         [ArduinoProperty(ArduinoPropertyAttribute.STATE, -1)]
-        public int ReportInterval
+        public Int16 ReportInterval
         {
-            get { return Get<int>(); }
+            get { return Get<Int16>(); }
             set { Set(value, IsReady); }
         }
 
         public bool IsReady => State == DeviceState.CONFIGURED;
 
-        [ArduinoProperty(ArduinoPropertyAttribute.DATA)]
+        /*[ArduinoProperty(ArduinoPropertyAttribute.METADATA, DateTime.MinValue)]
         public DateTime LastStatusResponse
         {
             get { return Get<DateTime>(); }
             set { Set(value, IsReady, IsReady); }
-        }
+        }*/
 
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
 
@@ -274,7 +274,7 @@ namespace Chetch.Arduino2
                         State = DeviceState.CONFIGURED;
                     }
                     OnStatusResponse(message);
-                    LastStatusResponse = DateTime.Now;
+                    //LastStatusResponse = DateTime.Now;
                     break;
             }
 
@@ -431,7 +431,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL:
-                    ReportInterval = (int)parameters[0];
+                    ReportInterval = (Int16)parameters[0];
                     break;
             }
             return true;
