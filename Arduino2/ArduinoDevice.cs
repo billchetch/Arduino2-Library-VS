@@ -101,8 +101,13 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady); }
         }
 
-
         public bool IsReady => State == DeviceState.CONFIGURED;
+
+        public DateTime LastStatusResponse
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value, IsReady, IsReady); }
+        }
 
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
 
@@ -268,6 +273,7 @@ namespace Chetch.Arduino2
                         State = DeviceState.CONFIGURED;
                     }
                     OnStatusResponse(message);
+                    LastStatusResponse = DateTime.Now;
                     break;
             }
 
