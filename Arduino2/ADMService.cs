@@ -267,6 +267,11 @@ namespace Chetch.Arduino2
             return true;
         }
 
+        virtual protected bool CanDispatch(ArduinoObject ao, String propertyName)
+        {
+            return true;
+        }
+
         //loggging events
         protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
@@ -302,7 +307,7 @@ namespace Chetch.Arduino2
             }
 
             //now we dispatch a message to any subscribers to the service
-            if (propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsMetaData || propertyAttribute.IsError)
+            if ((propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsMetaData || propertyAttribute.IsError) && CanDispatch(ao, dsoArgs.PropertyName))
             {
                 var message = new Message(propertyAttribute.IsError ? MessageType.ERROR : MessageType.DATA);
                 var schema = new MessageSchema(message);
