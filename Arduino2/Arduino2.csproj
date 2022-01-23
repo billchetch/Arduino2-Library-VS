@@ -62,9 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ADMMessage.cs" />
-    <Compile Include="ADMService.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="ADMService.cs" />
     <Compile Include="ADMServiceDB.cs" />
     <Compile Include="ArduinoDeviceGroup.cs" />
     <Compile Include="ArduinoCommand.cs" />
