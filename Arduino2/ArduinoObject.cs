@@ -12,11 +12,13 @@ namespace Chetch.Arduino2
         [AttributeUsage(AttributeTargets.Property)]
         public class ArduinoPropertyAttribute : DataSourceObject.PropertyAttribute
         {
-            public const int STATE = 64; //Tells of the fundamental state of the device and in this regard a change of value would be something to record
+            public const int STATE = 64; //Tells of the fundamental state of the device and in this regard a change of value would be an event to record
             public const int DATA = 128; //Tells of the data produced by the device and in this regard would be logged in periodic intervals
-            
+            public const int METADATA = 256; //Tells of something about the data e.g. when data was last updated ... something to be broadcast perhaps
+
             public bool IsState => HasAttribute(STATE);
             public bool IsData => HasAttribute(DATA);
+            public bool IsMetaData => HasAttribute(METADATA);
 
             public ArduinoPropertyAttribute(int attributtes) : base(attributtes)
             {}

@@ -103,6 +103,7 @@ namespace Chetch.Arduino2
 
         public bool IsReady => State == DeviceState.CONFIGURED;
 
+        [ArduinoProperty(ArduinoPropertyAttribute.DATA)]
         public DateTime LastStatusResponse
         {
             get { return Get<DateTime>(); }
