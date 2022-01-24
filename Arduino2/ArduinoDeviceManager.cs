@@ -181,10 +181,11 @@ namespace Chetch.Arduino2
         
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
-        private System.Timers.Timer _synchroniseTimer;
-
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceived { get; internal set; }
+
+        private System.Timers.Timer _synchroniseTimer;
+
 
         //Board properties (assigned by return message from initialise response)
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
@@ -446,102 +447,7 @@ namespace Chetch.Arduino2
                 if (message.Target == ADM_TARGET_ID)
                 {
                     //Board
-                    switch (message.Type)
-                    {
-                        case MessageType.ERROR:
-                            ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
-                            SetError("ADMErrorCode: " + errorCode.ToString(), "N/A");
-                            Tracing?.TraceEvent(TraceEventType.Error, 1500, "ADM {0} Message Type Error, code: {1}", ID, errorCode);
-                            //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
-                            //Console.WriteLine("---------------------------");
-                            break;
-
-                        case MessageType.INITIALISE_RESPONSE:
-                            //copy some values for compairson
-                            AttachmentMode am = AttachMode;
-                            AnalogReference ar = AREF;
-                            AssignMessageValues(message, "BoardName", "BoardMaxDevices", "AttachMode", "AREF");
-                            if(am != AttachMode)
-                            {
-                                throw new Exception(String.Format("{0} ADM has attachment mode {1} but board attachment mode is {2}", ID, am, AttachMode));
-                            }
-                            if (ar != AREF)
-                            {
-                                throw new Exception(String.Format("{0} ADM has AREF {1} but board AREF is {2}", ID, ar, AREF));
-                            }
-
-                            State = ADMState.INITIALISED;
-                            Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}, Attachmetn mode {3}, AREF {4}", ID, BoardName, BoardMaxDevices, AttachMode, AREF);
-                            if(_devices.Count > BoardMaxDevices)
-                            {
-                                throw new Exception(String.Format("{0} ADM has {1} devices but board {2} only supports {3} devices", ID, _devices.Count, BoardName, BoardMaxDevices));
-                            } else
-                            {
-                                Configure();
-                            }
-                            break;
-
-                        case MessageType.CONFIGURE_RESPONSE:
-                            State = ADMState.CONFIGURED;
-
-                            if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
-                            {
-                                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} attached as observer so requesting status", ID);
-                                RequestStatus(); //this will send a status request message
-                            } else if (!IsEmpty)
-                            {
-                                State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
-                                foreach (var dev in _devices.Values)
-                                {
-                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
-                                    dev.Initialise();
-                                    //Thread.Sleep(500);
-                                }
-                            }
-                            break;
-
-                        case MessageType.STATUS_RESPONSE:
-                            AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
-                            //Console.WriteLine(">>> Memory: {0}", BoardMemory);
-                            if (IsDeviceReady)
-                            {
-                                int n = GetMessageValue<int>("DeviceCount", message);
-                                if(n != _devices.Count)
-                                {
-                                    if (Synchronising)
-                                    {
-                                        Synchronising = false;
-                                        Synchronised = false;
-                                    }
-                                    throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
-                                }
-                                else
-                                {
-                                    if (Synchronising)
-                                    {
-                                        Synchronised = true;
-                                    }
-                                }
-                            } else if(AttachMode == AttachmentMode.OBSERVER_OBSERVED)
-                            {
-                                int n = GetMessageValue<int>("DeviceCount", message);
-                                if (n != _devices.Count)
-                                {
-                                    throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
-                                }
-
-                                //We have same number of devices in this ADM as in board so let's get the status of each device as this will set it's state upon return (see ArduinoDevice::HandleMesssage)
-                                foreach(var d in _devices.Values)
-                                {
-                                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} device {1} requesting status", ID, d.ID);
-                                    d.RequestStatus();
-                                }
-                            }
-                            break;
-                    }
-
-                    //release message tags used by the board
-                    base.HandleMessage(message);
+                    HandleMessage(message);
                 }
                 else if (message.Target == ADM_STREAM_TARGET_ID)
                 {
@@ -602,6 +508,108 @@ namespace Chetch.Arduino2
                 var args = new MessageReceivedArgs(message);
                 MessageReceived(this, args);
             }
+        }
+
+        public override void HandleMessage(ADMMessage message)
+        {
+            //Board
+            switch (message.Type)
+            {
+                case MessageType.ERROR:
+                    ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
+                    SetError("ADMErrorCode: " + errorCode.ToString(), "N/A");
+                    Tracing?.TraceEvent(TraceEventType.Error, 1500, "ADM {0} Message Type Error, code: {1}", ID, errorCode);
+                    //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
+                    //Console.WriteLine("---------------------------");
+                    break;
+
+                case MessageType.INITIALISE_RESPONSE:
+                    //copy some values for compairson
+                    AttachmentMode am = AttachMode;
+                    AnalogReference ar = AREF;
+                    AssignMessageValues(message, "BoardName", "BoardMaxDevices", "AttachMode", "AREF");
+                    if (am != AttachMode)
+                    {
+                        throw new Exception(String.Format("{0} ADM has attachment mode {1} but board attachment mode is {2}", ID, am, AttachMode));
+                    }
+                    if (ar != AREF)
+                    {
+                        throw new Exception(String.Format("{0} ADM has AREF {1} but board AREF is {2}", ID, ar, AREF));
+                    }
+
+                    State = ADMState.INITIALISED;
+                    Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}, Attachmetn mode {3}, AREF {4}", ID, BoardName, BoardMaxDevices, AttachMode, AREF);
+                    if (_devices.Count > BoardMaxDevices)
+                    {
+                        throw new Exception(String.Format("{0} ADM has {1} devices but board {2} only supports {3} devices", ID, _devices.Count, BoardName, BoardMaxDevices));
+                    }
+                    else
+                    {
+                        Configure();
+                    }
+                    break;
+
+                case MessageType.CONFIGURE_RESPONSE:
+                    State = ADMState.CONFIGURED;
+
+                    if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
+                    {
+                        Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} attached as observer so requesting status", ID);
+                        RequestStatus(); //this will send a status request message
+                    }
+                    else if (!IsEmpty)
+                    {
+                        State = ADMState.DEVICE_INITIALISING; //state will be upodated when all responses are given (see device switch below)
+                        foreach (var dev in _devices.Values)
+                        {
+                            Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Initialising device {1}", ID, dev.ID);
+                            dev.Initialise();
+                            //Thread.Sleep(500);
+                        }
+                    }
+                    break;
+
+                case MessageType.STATUS_RESPONSE:
+                    AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
+                    //Console.WriteLine(">>> Memory: {0}", BoardMemory);
+                    if (IsDeviceReady)
+                    {
+                        int n = GetMessageValue<int>("DeviceCount", message);
+                        if (n != _devices.Count)
+                        {
+                            if (Synchronising)
+                            {
+                                Synchronising = false;
+                                Synchronised = false;
+                            }
+                            throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
+                        }
+                        else
+                        {
+                            if (Synchronising)
+                            {
+                                Synchronised = true;
+                            }
+                        }
+                    }
+                    else if (AttachMode == AttachmentMode.OBSERVER_OBSERVED)
+                    {
+                        int n = GetMessageValue<int>("DeviceCount", message);
+                        if (n != _devices.Count)
+                        {
+                            throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
+                        }
+
+                        //We have same number of devices in this ADM as in board so let's get the status of each device as this will set it's state upon return (see ArduinoDevice::HandleMesssage)
+                        foreach (var d in _devices.Values)
+                        {
+                            Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} device {1} requesting status", ID, d.ID);
+                            d.RequestStatus();
+                        }
+                    }
+                    break;
+            }
+            base.HandleMessage(message);
         }
 
         public void PingStream()

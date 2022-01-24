@@ -29,6 +29,10 @@ namespace Chetch.Arduino2
 
         protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
 
+        protected DateTime LastMessagedHandledOn;
+
+        protected ADMMessage LastMessagedHandled;
+
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public String ID { get; internal set; }
 
@@ -78,6 +82,8 @@ namespace Chetch.Arduino2
             {
                 message.Tag = MessageTags.Release(message.Tag);
             }
+            LastMessagedHandledOn = DateTime.Now;
+            LastMessagedHandled = message;
         }
 
         protected void SetError(String error, String info = "N/A")
