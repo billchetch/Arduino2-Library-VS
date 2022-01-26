@@ -162,6 +162,8 @@ namespace Chetch.Arduino2
             internal set { Set(value, value > ADMState.CREATED); }
         }
 
+
+        //Devices
         private Dictionary<String, ArduinoDevice> _devices = new Dictionary<string, ArduinoDevice>();
 
         private Dictionary<String, ArduinoDeviceGroup> _deviceGroups = new Dictionary<string, ArduinoDeviceGroup>();
@@ -178,7 +180,9 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public int DeviceGroupCount => _deviceGroups.Count;
-        
+
+        public ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
@@ -440,10 +444,19 @@ namespace Chetch.Arduino2
             
             try
             {
+                //get the message from stream data
                 f.Add(e.DataBlock);
                 f.Validate();
                 message = ADMMessage.Deserialize(f.Payload);
                 LastMessageReceived = DateTime.Now;
+
+                //release tag
+                if (message.Tag > 0)
+                {
+                    message.Tag = MessageTags.Release(message.Tag);
+                }
+
+                //now direct to the target
                 if (message.Target == ADM_TARGET_ID)
                 {
                     //Board
@@ -889,11 +902,12 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        public void RequestStatus()
+        public byte RequestStatus(bool tag = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            var message = CreateMessage(MessageType.STATUS_REQUEST);
+            var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
             SendMessage(message);
+            return message.Tag;
         }
 
         public void Ping()

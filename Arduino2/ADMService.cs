@@ -98,6 +98,47 @@ namespace Chetch.Arduino2
             }
         }
 
+        public class Request
+        {
+            public const int DEFAULT_TTL = 30000; //milliseconds before expired
+
+            public String RequestID { get; internal set; }
+
+            public String Requester  { get; internal set; }
+
+            public DateTime Created { get; internal set; }
+
+            private int _ttl = -1;
+
+            public Request(String requestID, String requester, int ttl = DEFAULT_TTL)
+            {
+                RequestID = requestID;
+                Requester = requester;
+                _ttl = ttl;
+            }
+
+            virtual public bool HasExpired => _ttl <= 0 ? false : (DateTime.Now.Ticks - Created.Ticks / TimeSpan.TicksPerSecond) > _ttl;
+        }
+
+        public class ADMRequest : Request
+        {
+            public static String CreateRequestID(ArduinoDeviceManager adm, byte tag)
+            {
+                return adm.UID + "-" + tag;
+            }
+
+            private ArduinoDeviceManager _adm;
+            private byte _tag;
+
+            public ADMRequest(ArduinoDeviceManager adm, byte tag, String requester) : base(CreateRequestID(adm, tag), requester, -1)
+            {
+                _adm = adm;
+                _tag = tag;
+            }
+
+            public override bool HasExpired => _adm.MessageTags.IsAvailable(_tag);
+        }
+
         protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
         protected const int BEGIN_TIMEOUT = 8000;
         protected const int MAX_BEGIN_ATTEMPTS = 3;
@@ -113,9 +154,10 @@ namespace Chetch.Arduino2
         private System.Timers.Timer _logSnapshotTimer;
         protected int LogSnapshotTimerInterval { get; set; } = DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL;
 
-        private Dictionary<String, Message> _messagesToDispatch = new Dictionary<String, Message>();
+        private Dictionary<ArduinoObject, Message> _messagesToDispatch = new Dictionary<ArduinoObject, Message>();
         private Object _dispatchMessageLock = new object();
 
+        private Dictionary<String, Request> _requests = new Dictionary<String, Request>();
 
         public ADMService(String clientName, String clientManagerSource, String serviceSource, String eventLog) : base(clientName, clientManagerSource, serviceSource, eventLog)
         {
@@ -152,6 +194,23 @@ namespace Chetch.Arduino2
                 aos.AddRange(adm.GetDeviceGroups());
             }
             return aos;
+        }
+
+        protected ArduinoDeviceManager GetADMFromArduinoObject(ArduinoObject ao)
+        {
+            if(ao is ArduinoDeviceManager)
+            {
+                return (ArduinoDeviceManager)ao;
+            }
+            if(ao is ArduinoDevice)
+            {
+                return ((ArduinoDevice)ao).ADM;
+            }
+            if (ao is ArduinoDeviceGroup)
+            {
+                return ((ArduinoDeviceGroup)ao).ADM;
+            }
+            return null;
         }
 
         protected override void OnStart(string[] args)
@@ -324,25 +383,88 @@ namespace Chetch.Arduino2
                     schema.AddADM((ArduinoDeviceManager)sender);
                 }
 
-                DispatchMessage(ao.UID, message);
+                DispatchMessage(ao, message);
             }
         }
 
-        protected void DispatchMessage(String uid, Message message)
+        protected void AddRequest(Request request)
+        {
+            _requests[request.RequestID] = request;
+        }
+
+        protected void AddRequest(String requestID, Message request, int ttl = Request.DEFAULT_TTL)
+        {
+            AddRequest(new Request(requestID, request.Sender, ttl));
+        }
+
+        protected Request GetRequest(String requestID, bool removeIfExpired = true)
+        {
+            if (_requests.ContainsKey(requestID))
+            {
+                var req = _requests[requestID];
+                if (removeIfExpired && req.HasExpired)
+                {
+                    _requests.Remove(requestID);
+                }
+                return req;
+            } else
+            {
+                return null;
+            }
+        }
+
+        protected void PurgeExpiredRequests()
+        {
+            List<String> toPurge = new List<String>();
+            foreach(var r in _requests.Values)
+            {
+                if (r.HasExpired) toPurge.Add(r.RequestID);
+            }
+            foreach(var rid in toPurge)
+            {
+                _requests.Remove(rid);
+            }
+        }
+
+        protected void AddRequest(ArduinoDeviceManager adm, byte tag, Message request)
+        {
+            AddRequest(new ADMRequest(adm, tag, request.Sender));
+        }
+
+        protected ADMRequest GetRequest(ArduinoDeviceManager adm, byte tag)
+        {
+            return (ADMRequest)GetRequest(ADMRequest.CreateRequestID(adm, tag));
+        }
+
+        protected void DispatchMessage(ArduinoObject ao, Message message)
         {
             lock (_dispatchMessageLock)
             {
-                _messagesToDispatch[uid] = message;
+                _messagesToDispatch[ao] = message;
             }
 
             Task.Run(() =>
             {
+                Thread.Sleep(1);
                 lock (_dispatchMessageLock)
                 {
-                    Thread.Sleep(1);
-                    foreach(var msg in _messagesToDispatch.Values)
+                    foreach(var kv in _messagesToDispatch)
                     {
-                        Broadcast(msg);
+                        byte tag = kv.Key.LastMessagedHandled == null ? (byte)0 : kv.Key.LastMessagedHandled.Tag;
+                        ADMRequest req = null;
+                        if (tag > 0) 
+                        {
+                            var adm = GetADMFromArduinoObject(kv.Key);
+                            req = GetRequest(adm, tag);
+                        }
+                        if (req == null || req.HasExpired)
+                        {
+                            Broadcast(kv.Value);
+                        } else
+                        {
+                            kv.Value.Target = req.Requester;
+                            SendMessage(kv.Value);
+                        }
                     }
 
                     _messagesToDispatch.Clear();
@@ -488,7 +610,7 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
-                                adm.RequestStatus();
+                                AddRequest(adm, adm.RequestStatus(true), message);
                                 schema.AddADM(adm);
                                 break;
 

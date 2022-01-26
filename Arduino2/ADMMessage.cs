@@ -45,11 +45,20 @@ namespace Chetch.Arduino2
             public byte Release(byte tag)
             {
                 if (tag == 0) return 0;
-                if (_usedTags.ContainsKey(tag))
+
+                //if this tag is a tagset key then only remove if it is available and then return the tag
+                if (_tagSets.ContainsKey(tag))
+                {
+                    if (IsAvailable(tag)) _usedTags.Remove(tag);
+                    return tag;
+                } 
+                //otherwise this is just a normal tag so we can remove it immediately
+                else if (_usedTags.ContainsKey(tag))
                 {
                     _usedTags.Remove(tag);
                 }
 
+                //now we check if the tag belongs to a set and we return the tagkey if it does
                 foreach (KeyValuePair<byte, List<byte>> tagSet in _tagSets)
                 {
                     if (tagSet.Value.Contains(tag))
@@ -106,7 +115,6 @@ namespace Chetch.Arduino2
 
                 return tag;
             }
-
 
 
             public bool IsAvailable(byte tag)

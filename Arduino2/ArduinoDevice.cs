@@ -132,7 +132,7 @@ namespace Chetch.Arduino2
             message.Sender = BoardID;
             if (tag)
             {
-                message.Tag = MessageTags.CreateTag();
+                message.Tag = ADM.MessageTags.CreateTag();
             }
 
             return message;
@@ -330,7 +330,7 @@ namespace Chetch.Arduino2
 
             int ttl = System.Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             //Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
-            byte tag = MessageTags.CreateTagSet(ttl);
+            byte tag = ADM.MessageTags.CreateTagSet(ttl);
             Action action = () =>
             {
                 try
@@ -398,7 +398,7 @@ namespace Chetch.Arduino2
                             {
                                 //assume the command is a message
                                 var cm = CreateMessage(MessageType.COMMAND);
-                                cm.Tag = MessageTags.CreateTagInSet(tag);
+                                cm.Tag = ADM.MessageTags.CreateTagInSet(tag);
                                 cm.AddArgument((byte)cmd.Command);
                                 foreach (var p in allParams)
                                 {

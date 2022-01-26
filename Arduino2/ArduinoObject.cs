@@ -27,11 +27,10 @@ namespace Chetch.Arduino2
             {}
         }
 
-        protected ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+        public DateTime LastMessagedHandledOn { get; internal set; }
 
-        protected DateTime LastMessagedHandledOn;
+        public ADMMessage LastMessagedHandled { get; internal set; }
 
-        protected ADMMessage LastMessagedHandled;
 
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public String ID { get; internal set; }
@@ -78,10 +77,6 @@ namespace Chetch.Arduino2
 
         virtual public void HandleMessage(ADMMessage message)
         {
-            if (message.Tag > 0)
-            {
-                message.Tag = MessageTags.Release(message.Tag);
-            }
             LastMessagedHandledOn = DateTime.Now;
             LastMessagedHandled = message;
         }
