@@ -124,17 +124,13 @@ namespace Chetch.Arduino2
             State = DeviceState.CREATED;
         }
 
-        protected ADMMessage CreateMessage(MessageType messageType, bool tag = false)
+        protected ADMMessage CreateMessage(MessageType messageType)
         {
             var message = new ADMMessage();
             message.Type = messageType;
             message.Target = BoardID;
             message.Sender = BoardID;
-            if (tag)
-            {
-                message.Tag = ADM.MessageTags.CreateTag();
-            }
-
+            
             return message;
         }
         
@@ -328,14 +324,14 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
             }
 
-            int ttl = System.Math.Max(ADMMessage.MessageTags.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
+            int ttl = System.Math.Max(ADMRequests.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             //Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
-            byte tag = ADM.MessageTags.CreateTagSet(ttl);
+            ADMRequests.ADMRequest req = ADM.Requests.AddRequest(ttl, cmd.TotalCommandCount - cmd.TotalDelayCount);
             Action action = () =>
             {
                 try
                 {
-                    ExecuteCommand(cmd, tag, parameters);
+                    ExecuteCommand(cmd, req.Tag, parameters);
                 } catch  (Exception e)
                 {
                     Error = e.Message;
@@ -398,7 +394,7 @@ namespace Chetch.Arduino2
                             {
                                 //assume the command is a message
                                 var cm = CreateMessage(MessageType.COMMAND);
-                                cm.Tag = ADM.MessageTags.CreateTagInSet(tag);
+                                cm.Tag = ADM.Requests.AddRequestToSet(tag).Tag;
                                 cm.AddArgument((byte)cmd.Command);
                                 foreach (var p in allParams)
                                 {

@@ -181,7 +181,9 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public int DeviceGroupCount => _deviceGroups.Count;
 
-        public ADMMessage.MessageTags MessageTags { get; } = new ADMMessage.MessageTags();
+        public ADMRequests Requests { get; } = new ADMRequests();
+
+        public ADMRequests.ADMRequest ProcessingRequest { get; internal set; } = null;
 
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
@@ -450,12 +452,9 @@ namespace Chetch.Arduino2
                 message = ADMMessage.Deserialize(f.Payload);
                 LastMessageReceived = DateTime.Now;
 
-                //release tag
-                if (message.Tag > 0)
-                {
-                    message.Tag = MessageTags.Release(message.Tag);
-                }
-
+                //use tag to get current request and release it for future use
+                ProcessingRequest = Requests.Release(message.Tag);
+                
                 //now direct to the target
                 if (message.Target == ADM_TARGET_ID)
                 {
@@ -514,6 +513,10 @@ namespace Chetch.Arduino2
             catch (Exception ex)
             {
                 Tracing?.TraceEvent(TraceEventType.Error, 500, "ADM {0} Error: {1}", ID, ex.Message);
+            }
+            finally
+            {
+                ProcessingRequest = null;
             }
 
             if (message != null && IsBoardReady && MessageReceived != null)
@@ -630,14 +633,11 @@ namespace Chetch.Arduino2
             _sfc.Ping();
         }
 
-        public ADMMessage CreateMessage(MessageType type, bool tag = false, byte sender = ADM_TARGET_ID)
+        public ADMMessage CreateMessage(MessageType type, byte tag = 0, byte sender = ADM_TARGET_ID)
         {
             ADMMessage message = new ADMMessage();
             message.Type = type;
-            if (tag)
-            {
-                message.Tag = MessageTags.CreateTag();
-            }
+            message.Tag = tag;
             message.Target = ADM_TARGET_ID;
             message.Sender = ADM_TARGET_ID;
             return message;
@@ -902,12 +902,19 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        public byte RequestStatus(bool tag = false)
+        public ADMRequests.ADMRequest RequestStatus(bool request = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
+            ADMRequests.ADMRequest req = null;
+            byte tag = 0;
+            if (request)
+            {
+                req = Requests.AddRequest();
+                tag = req.Tag;
+            }
             var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
             SendMessage(message);
-            return message.Tag;
+            return req;
         }
 
         public void Ping()
