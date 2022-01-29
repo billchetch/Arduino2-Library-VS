@@ -136,7 +136,7 @@ namespace Chetch.Arduino2
                 _tag = tag;
             }
 
-            public override bool HasExpired => _adm.MessageTags.IsAvailable(_tag);
+            public override bool HasExpired => _adm.Requests.IsAvailable(_tag);
         }
 
         protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
@@ -610,7 +610,8 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
-                                AddRequest(adm, adm.RequestStatus(true), message);
+                                ADMRequestManager.ADMRequest req = adm.RequestStatus(true);
+                                req.Owner = message.Sender;
                                 schema.AddADM(adm);
                                 break;
 

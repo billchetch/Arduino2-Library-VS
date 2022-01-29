@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Chetch.Arduino2
 {
-    public class ADMRequests
+    public class ADMRequestManager
     {
         public class ADMRequest
         {
@@ -34,24 +34,29 @@ namespace Chetch.Arduino2
 
         class TagSet
         {
+            public ADMRequest Request { get; internal set; }
+
             public byte Tag { get; internal set; }
             byte[] _tags;
             public byte TagCount { get; internal set; } = 0;
 
             public bool IsFull => TagCount == _tags.Length;
 
-            public bool IsEmpty => TagCount == 0;
+            public bool HasExpired => Request.HasExpired || (_filled && TagCount == 0);
 
-            public bool IsExhausted => IsEmpty && _used;
-
+            public bool IsUsed => _used;
             bool _used = false;
 
-            public TagSet(byte tag, int tagSetSize)
+            bool _filled = false;
+
+            public TagSet(ADMRequest request, int tagSetSize)
             {
-                Tag = tag;
+                Request = request;
+                Tag = Request.Tag;
                 _tags = new byte[tagSetSize];
-                TagCount = 0;
-                for (int i = 0; i < _tags.Length; i++)
+                TagCount = 1;
+                _tags[0] = Tag;
+                for (int i = 1; i < _tags.Length; i++)
                 {
                     _tags[i] = 0;
                 }
@@ -66,15 +71,26 @@ namespace Chetch.Arduino2
                 return false;
             }
 
+            public void Use()
+            {
+                Add(Tag);
+            }
+
             public void Add(byte tag)
             {
+                _used = true;
                 if (Contains(tag))
                 {
-                    throw new Exception(String.Format("Tag set {0} already contains {1}", Tag, tag));
-                    _tags[TagCount] = tag;
-                    TagCount++;
+                    return;
                 }
-                _used = true;
+
+                if (IsFull)
+                {
+                    throw new InvalidOperationException(String.Format("Tag set {0} is full", Tag));
+                }
+                _tags[TagCount] = tag;
+                TagCount++;
+                if (IsFull) _filled = true;
             }
 
             public void Remove(byte tag)
@@ -104,33 +120,36 @@ namespace Chetch.Arduino2
             if (tag == 0 || !_requests.ContainsKey(tag)) return null;
 
             var req = _requests[tag];
-
-            //if this tag is the key to a tagset key then only remove if it is available and then return the tag
-            if (_tagSets.ContainsKey(tag))
+            
+            if (IsTagSet(tag))
             {
-                if (IsAvailable(tag) || _tagSets[tag].IsExhausted)
+                if (_tagSets[tag].HasExpired)
                 {
                     _requests.Remove(tag);
                     _tagSets.Remove(tag);
+                    return req;
                 }
-                return req;
-            }
-            //otherwise this is just a normal tag so we can remove it immediately
-            else if (_requests.ContainsKey(tag))
+            } else
             {
                 _requests.Remove(tag);
             }
-            
-            //now we check if the tag belongs to a set and we return the tagkey if it does
+
+
+            //now we check if the tag belongs to a set and we return the set Request if it does
             foreach (var tagSet in _tagSets.Values)
             {
                 if (tagSet.Contains(tag))
                 {
                     tagSet.Remove(tag);
-                    return _requests[tagSet.Tag];
+                    return tagSet.Request;
                 }
             }
             return req;
+        }
+
+        public ADMRequest Release(ADMRequest req)
+        {
+            return Release(req.Tag);
         }
 
         public ADMRequest AddRequest(int ttl = DEFAULT_TTL, int tagsSetSize = 0)
@@ -153,7 +172,7 @@ namespace Chetch.Arduino2
 
             if(tagsSetSize > 0)
             {
-                _tagSets[req.Tag] = new TagSet(req.Tag, tagsSetSize);
+                _tagSets[req.Tag] = new TagSet(req, tagsSetSize);
             }
 
             return req;
@@ -164,22 +183,28 @@ namespace Chetch.Arduino2
         {
             if (!_tagSets.ContainsKey(tagKey))
             {
-                throw new InvalidOperationException(String.Format("Cannot create tag in set {0} as the set does not exists", tagKey));
+                throw new InvalidOperationException(String.Format("Cannot add request to set {0} as the set does not exists", tagKey));
             }
 
 
-            ADMRequest req = _requests[tagKey];
-            if(req.HasExpired)
+            TagSet tagSet = _tagSets[tagKey];
+            if (tagSet.HasExpired)
             {
-                throw new InvalidOperationException(String.Format("Cannot add request set {0} as the set has already expired", tagKey));
+                throw new InvalidOperationException(String.Format("Cannot add request to set {0} as the set has already expired", tagKey));
             }
 
-            //if the set is empty use the tagKey as the tag otherwise create a new tag
-            ADMRequest newReq = AddRequest(System.Math.Max(1000, req.RemainingTTL));
-            byte tag = newReq.Tag;
-            _tagSets[tagKey].Add(tag);
 
-            return newReq;
+            if (!tagSet.IsUsed)
+            {
+                tagSet.Use(); 
+                return tagSet.Request;
+            }
+            else
+            {
+                ADMRequest newReq = AddRequest(System.Math.Max(1000, tagSet.Request.RemainingTTL));
+                tagSet.Add(newReq.Tag);
+                return newReq;
+            }
         }
 
         protected bool IsTagSet(byte tag)
@@ -197,9 +222,9 @@ namespace Chetch.Arduino2
             get
             {
                 int used = 0;
-                foreach (var mt in _requests.Values)
+                foreach (var req in _requests.Values)
                 {
-                    if (!mt.HasExpired)
+                    if (!req.HasExpired)
                     {
                         used++;
                     }
@@ -214,6 +239,22 @@ namespace Chetch.Arduino2
             get
             {
                 return 255 - Used;
+            }
+        }
+
+        public void RemoveExpiredRequests()
+        {
+            List<byte> toRemove = new List<byte>();
+            foreach(var req in _requests.Values)
+            {
+                if (req.HasExpired)
+                {
+                    toRemove.Add(req.Tag);
+                }
+            }
+            foreach(var tag in toRemove)
+            {
+                _requests.Remove(tag);
             }
         }
 

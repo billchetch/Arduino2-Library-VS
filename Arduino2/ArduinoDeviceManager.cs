@@ -181,9 +181,9 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public int DeviceGroupCount => _deviceGroups.Count;
 
-        public ADMRequests Requests { get; } = new ADMRequests();
+        public ADMRequestManager Requests { get; } = new ADMRequestManager();
 
-        public ADMRequests.ADMRequest ProcessingRequest { get; internal set; } = null;
+        public ADMRequestManager.ADMRequest ProcessingRequest { get; internal set; } = null;
 
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
@@ -902,10 +902,10 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        public ADMRequests.ADMRequest RequestStatus(bool request = false)
+        public ADMRequestManager.ADMRequest RequestStatus(bool request = false)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
-            ADMRequests.ADMRequest req = null;
+            ADMRequestManager.ADMRequest req = null;
             byte tag = 0;
             if (request)
             {

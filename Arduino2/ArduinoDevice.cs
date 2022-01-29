@@ -312,7 +312,7 @@ namespace Chetch.Arduino2
         }
 
         private Task _executeCommandTask = null;
-        public void ExecuteCommand(String commandAlias, List<Object> parameters = null)
+        public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)
         {
             if (!IsReady)
             {
@@ -324,9 +324,9 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
             }
 
-            int ttl = System.Math.Max(ADMRequests.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
+            int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             //Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
-            ADMRequests.ADMRequest req = ADM.Requests.AddRequest(ttl, cmd.TotalCommandCount - cmd.TotalDelayCount);
+            ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl, cmd.TotalCommandCount - cmd.TotalDelayCount);
             Action action = () =>
             {
                 try
@@ -347,16 +347,17 @@ namespace Chetch.Arduino2
             {
                 _executeCommandTask = _executeCommandTask.ContinueWith(antecedent => action());
             }
+            return req;
         }
 
-        public void ExecuteCommand(String commandAlias, params Object[] parameters)
+        public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, params Object[] parameters)
         {
-            ExecuteCommand(commandAlias, parameters.ToList());
+            return ExecuteCommand(commandAlias, parameters.ToList());
         }
 
-        public void ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params Object[] parameters)
+        public ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params Object[] parameters)
         {
-            ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
+            return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
         virtual protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<Object> parameters = null)

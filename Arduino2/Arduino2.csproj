@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ADMMessage.cs" />
+    <Compile Include="ADMRequestManager.cs" />
     <Compile Include="ADMService.cs" />
     <Compile Include="ADMServiceDB.cs" />
     <Compile Include="ArduinoDeviceGroup.cs" />
