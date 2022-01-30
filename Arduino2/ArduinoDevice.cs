@@ -104,7 +104,7 @@ namespace Chetch.Arduino2
         public bool IsReady => State == DeviceState.CONFIGURED;
 
         [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
-        public DateTime LastStatusResponse
+        public DateTime LastStatusResponseOn
         {
             get { return Get<DateTime>(); }
             set { Set(value, IsReady, IsReady); }
@@ -270,7 +270,7 @@ namespace Chetch.Arduino2
                         State = DeviceState.CONFIGURED;
                     }
                     OnStatusResponse(message);
-                    LastStatusResponse = DateTime.Now;
+                    LastStatusResponseOn = DateTime.Now;
                     break;
             }
 

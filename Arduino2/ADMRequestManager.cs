@@ -119,31 +119,38 @@ namespace Chetch.Arduino2
         {
             if (tag == 0 || !_requests.ContainsKey(tag)) return null;
 
-            var req = _requests[tag];
             
-            if (IsTagSet(tag))
+            //Check if the tag belongs to a set and we return the set Request if it does
+            TagSet tagSet = null;
+            foreach (var ts in _tagSets.Values)
             {
-                if (_tagSets[tag].HasExpired)
+                if (ts.Contains(tag))
+                {
+                    tagSet = ts;
+                    break;
+                }
+            }
+
+            ADMRequest req = null;
+            if(tagSet != null)
+            {
+                tagSet.Remove(tag);
+                if (tagSet.HasExpired)
+                {
+                    _requests.Remove(tagSet.Tag);
+                    _tagSets.Remove(tagSet.Tag);
+                }
+                if (tagSet.Tag != tag)
                 {
                     _requests.Remove(tag);
-                    _tagSets.Remove(tag);
-                    return req;
                 }
+                req = tagSet.Request;
             } else
             {
+                req = _requests[tag];
                 _requests.Remove(tag);
             }
 
-
-            //now we check if the tag belongs to a set and we return the set Request if it does
-            foreach (var tagSet in _tagSets.Values)
-            {
-                if (tagSet.Contains(tag))
-                {
-                    tagSet.Remove(tag);
-                    return tagSet.Request;
-                }
-            }
             return req;
         }
 

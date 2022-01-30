@@ -192,6 +192,12 @@ namespace Chetch.Arduino2
 
         private System.Timers.Timer _synchroniseTimer;
 
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        public DateTime LastStatusResponseOn
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value, IsReady, IsReady); }
+        }
 
         //Board properties (assigned by return message from initialise response)
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
@@ -623,6 +629,7 @@ namespace Chetch.Arduino2
                             d.RequestStatus();
                         }
                     }
+                    LastStatusResponseOn = DateTime.Now;
                     break;
             }
             base.HandleMessage(message);
