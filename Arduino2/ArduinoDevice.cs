@@ -117,6 +117,13 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady, IsReady); }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        public DateTime LastCommandResponseOn
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value, IsReady, IsReady); }
+        }
+
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
 
         public ArduinoDevice(String id, String name)
@@ -213,10 +220,34 @@ namespace Chetch.Arduino2
             //a hook
         }
 
-        virtual public void RequestStatus()
+        virtual public ADMRequestManager.ADMRequest RequestStatus(String requester = null)
         {
             var message = CreateMessage(MessageType.STATUS_REQUEST);
+            ADMRequestManager.ADMRequest req = null;
+            if(requester != null)
+            {
+                req = ADM.Requests.AddRequest(requester);
+                message.Tag = req.Tag;
+            }
+
             SendMessage(message);
+
+            return req;
+        }
+
+        public ADMRequestManager.ADMRequest Ping(String requester = null)
+        {
+            var message = CreateMessage(MessageType.PING);
+            ADMRequestManager.ADMRequest req = null;
+            if (requester != null)
+            {
+                req = ADM.Requests.AddRequest(requester);
+                message.Tag = req.Tag;
+            }
+
+            SendMessage(message);
+
+            return req;
         }
 
         virtual protected void OnStatusResponse(ADMMessage message)
@@ -267,7 +298,10 @@ namespace Chetch.Arduino2
 
                 case MessageType.COMMAND_RESPONSE:
                     ArduinoCommand.DeviceCommand deviceCommand = GetMessageValue<ArduinoCommand.DeviceCommand>("DeviceCommand", message);
-                    HandleCommandResponse(deviceCommand, message);
+                    if (HandleCommandResponse(deviceCommand, message))
+                    {
+                        LastCommandResponseOn = DateTime.Now;
+                    }
                     break;
 
                 case MessageType.STATUS_RESPONSE:
@@ -337,7 +371,6 @@ namespace Chetch.Arduino2
 
             int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl);
-            req.Proceed = false;
             Action action = () =>
             {
                 try
@@ -346,6 +379,11 @@ namespace Chetch.Arduino2
                     {
                         DateTime started = DateTime.Now;
                         while (!req.Proceed || ((DateTime.Now.Ticks - started.Ticks) / TimeSpan.TicksPerMillisecond) < 100) ;
+                    }
+                    if(req.Owner == null)
+                    {
+                        ADM.Requests.Release(req);
+                        req = null;
                     }
                     ExecuteCommand(cmd, req, parameters);
                 } catch  (Exception e)
@@ -411,9 +449,22 @@ namespace Chetch.Arduino2
                             {
                                 //assume the command is a message
                                 var cm = CreateMessage(MessageType.COMMAND);
-                                var req = ADM.Requests.AddRequest();
-                                req.Owner = request.Owner;
-                                cm.Tag = req.Tag;
+                                byte tag = 0;
+                                if (request != null)
+                                {
+                                    if (!request.Proceed)
+                                    {
+                                        tag = request.Tag;
+                                        request.Proceed = true;
+                                    }
+                                    else
+                                    {
+                                        var req = ADM.Requests.AddRequest();
+                                        tag = req.Tag;
+                                        req.Owner = request.Owner;
+                                    }
+                                }
+                                cm.Tag = tag;
                                 cm.AddArgument((byte)cmd.Command);
                                 foreach (var p in allParams)
                                 {
@@ -453,7 +504,7 @@ namespace Chetch.Arduino2
         }
 
         //Called when a command response is received
-        virtual protected void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        virtual protected bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             switch (deviceCommand)
             {
@@ -466,21 +517,22 @@ namespace Chetch.Arduino2
                     AssignMessageValues(message, "ReportInterval");
                     break;
             }
+            return true;
         }
 
-        public void Enable(bool enabled = true)
+        public ADMRequestManager.ADMRequest Enable(bool enabled = true)
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.ENABLE, enabled);
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.ENABLE, enabled);
         }
 
-        public void Disable()
+        public ADMRequestManager.ADMRequest Disable()
         {
-            Enable(false);
+            return Enable(false);
         }
 
-        public void SetReportInterval(int interval)
+        public ADMRequestManager.ADMRequest SetReportInterval(int interval)
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, interval);
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, interval);
         }
     }
 

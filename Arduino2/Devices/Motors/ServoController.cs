@@ -69,7 +69,7 @@ namespace Chetch.Arduino2.Devices.Motors
             base.HandleMessage(message);
         }
 
-        protected override void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             switch (deviceCommand)
             {
@@ -78,7 +78,7 @@ namespace Chetch.Arduino2.Devices.Motors
                     AssignMessageValues(message, "Position");
                     break;
             }
-            base.HandleCommandResponse(deviceCommand, message);
+            return base.HandleCommandResponse(deviceCommand, message);
         }
 
     }

@@ -187,7 +187,7 @@ namespace Chetch.Arduino2.Devices
         }
 
         
-        protected override void HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             switch(deviceCommand)
             {
@@ -196,7 +196,7 @@ namespace Chetch.Arduino2.Devices
                     AssignMessageValues(message, "PinState");
                     break;
             }
-            base.HandleCommandResponse(deviceCommand, message);
+            return base.HandleCommandResponse(deviceCommand, message);
         }
     }
 }
