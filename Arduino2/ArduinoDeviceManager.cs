@@ -182,7 +182,7 @@ namespace Chetch.Arduino2
         public int DeviceGroupCount => _deviceGroups.Count;
 
         public ADMRequestManager Requests { get; } = new ADMRequestManager();
-
+        
         public ADMRequestManager.ADMRequest ProcessingRequest { get; internal set; } = null;
 
         public event EventHandler<MessageReceivedArgs> MessageReceived;
@@ -194,6 +194,13 @@ namespace Chetch.Arduino2
 
         [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
         public DateTime LastStatusResponseOn
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value, IsReady, IsReady); }
+        }
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        public DateTime LastPingResponseOn
         {
             get { return Get<DateTime>(); }
             set { Set(value, IsReady, IsReady); }
@@ -631,6 +638,11 @@ namespace Chetch.Arduino2
                     }
                     LastStatusResponseOn = DateTime.Now;
                     break;
+
+                case MessageType.PING_RESPONSE:
+                    AssignMessageValues(message, "BoardMillis", "BoardMemory");
+                    LastPingResponseOn = DateTime.Now;
+                    break;
             }
             base.HandleMessage(message);
         }
@@ -909,14 +921,14 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Start();
         }
 
-        public ADMRequestManager.ADMRequest RequestStatus(bool request = false)
+        public ADMRequestManager.ADMRequest RequestStatus(String requester = null)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
             ADMRequestManager.ADMRequest req = null;
             byte tag = 0;
-            if (request)
+            if (requester != null)
             {
-                req = Requests.AddRequest();
+                req = Requests.AddRequest(requester);
                 tag = req.Tag;
             }
             var message = CreateMessage(MessageType.STATUS_REQUEST, tag);
@@ -924,11 +936,19 @@ namespace Chetch.Arduino2
             return req;
         }
 
-        public void Ping()
+        public ADMRequestManager.ADMRequest Ping(String requester = null)
         {
             if (!IsBoardReady) throw new Exception("ADM is not ready");
+            ADMRequestManager.ADMRequest req = null;
+            byte tag = 0;
+            if (requester != null)
+            {
+                req = Requests.AddRequest(requester);
+                tag = req.Tag;
+            }
             var message = CreateMessage(MessageType.PING);
             SendMessage(message);
+            return req;
         }
 
         public bool Synchronise(int timeout = DEFAULT_SYNCHRONISE_TIMEOUT)

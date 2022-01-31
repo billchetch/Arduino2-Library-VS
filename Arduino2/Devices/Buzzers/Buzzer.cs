@@ -21,7 +21,7 @@ namespace Chetch.Arduino2.Devices.Buzzers
             AddCommand(ArduinoCommand.DeviceCommand.SILENCE);
         }
 
-        protected override void ExecuteCommand(ArduinoCommand cmd, byte tag, List<object> parameters = null)
+        protected override void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<object> parameters = null)
         {
             if(cmd.Command == ArduinoCommand.DeviceCommand.SILENCE)
             {
@@ -40,7 +40,7 @@ namespace Chetch.Arduino2.Devices.Buzzers
             } 
             else
             {
-                base.ExecuteCommand(cmd, tag, parameters);
+                base.ExecuteCommand(cmd, request, parameters);
             }
         }
 

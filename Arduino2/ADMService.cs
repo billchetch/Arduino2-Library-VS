@@ -610,9 +610,7 @@ namespace Chetch.Arduino2
                         switch (tgtcmd[1].Trim().ToLower())
                         {
                             case MessageSchema.COMMAND_STATUS:
-                                ADMRequestManager.ADMRequest req = adm.RequestStatus(true);
-                                req.Owner = message.Sender;
-                                schema.AddADM(adm);
+                                adm.RequestStatus(message.Sender);
                                 break;
 
                             case MessageSchema.COMMAND_PING:

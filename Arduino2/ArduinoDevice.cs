@@ -110,6 +110,13 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady, IsReady); }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        public DateTime LastPingResponseOn
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value, IsReady, IsReady); }
+        }
+
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
 
         public ArduinoDevice(String id, String name)
@@ -272,6 +279,10 @@ namespace Chetch.Arduino2
                     OnStatusResponse(message);
                     LastStatusResponseOn = DateTime.Now;
                     break;
+
+                case MessageType.PING_RESPONSE:
+                    LastPingResponseOn = DateTime.Now;
+                    break;
             }
 
             base.HandleMessage(message);
@@ -325,13 +336,18 @@ namespace Chetch.Arduino2
             }
 
             int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
-            //Console.WriteLine("Executing command {0} with tag set ttl {1}", commandAlias, ttl);
-            ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl, cmd.TotalCommandCount - cmd.TotalDelayCount);
+            ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl);
+            req.Proceed = false;
             Action action = () =>
             {
                 try
                 {
-                    ExecuteCommand(cmd, req.Tag, parameters);
+                    if (!req.Proceed) 
+                    {
+                        DateTime started = DateTime.Now;
+                        while (!req.Proceed || ((DateTime.Now.Ticks - started.Ticks) / TimeSpan.TicksPerMillisecond) < 100) ;
+                    }
+                    ExecuteCommand(cmd, req, parameters);
                 } catch  (Exception e)
                 {
                     Error = e.Message;
@@ -360,7 +376,7 @@ namespace Chetch.Arduino2
             return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
-        virtual protected void ExecuteCommand(ArduinoCommand cmd, byte tag, List<Object> parameters = null)
+        virtual protected void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<Object> parameters = null)
         {
             for (int i = 0; i < cmd.Repeat; i++)
             {
@@ -369,7 +385,7 @@ namespace Chetch.Arduino2
                     //TODO: how to handle parameters in the case of a compound command???
                     foreach (var c in cmd.Commands)
                     {
-                        ExecuteCommand(c, tag, parameters);
+                        ExecuteCommand(c, request, parameters);
                     }
                 }
                 else
@@ -395,7 +411,9 @@ namespace Chetch.Arduino2
                             {
                                 //assume the command is a message
                                 var cm = CreateMessage(MessageType.COMMAND);
-                                cm.Tag = ADM.Requests.AddRequestToSet(tag).Tag;
+                                var req = ADM.Requests.AddRequest();
+                                req.Owner = request.Owner;
+                                cm.Tag = req.Tag;
                                 cm.AddArgument((byte)cmd.Command);
                                 foreach (var p in allParams)
                                 {
