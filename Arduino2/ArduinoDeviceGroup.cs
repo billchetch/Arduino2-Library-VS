@@ -52,23 +52,24 @@ namespace Chetch.Arduino2
             return null;
         }
 
-        virtual public void Enable(bool enable = true, bool setDevices = true)
+        virtual public void Enable(bool enable = true, bool setDevices = true, String requester = null)
         {
             Enabled = enable;
             if (setDevices)
             {
                 foreach (var dev in Devices)
                 {
-                    dev.Enable(enable);
+                    var req = dev.Enable(enable);
+                    req.Owner = requester;
                 }
             }
         }
 
-        virtual public void RequestStatus()
+        virtual public void RequestStatus(String requester = null)
         {
             foreach (var dev in Devices)
             {
-                dev.RequestStatus();
+                dev.RequestStatus(requester);
             }
         }
 
@@ -104,11 +105,12 @@ namespace Chetch.Arduino2
 
         abstract protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property);
         
-        virtual public void ExecuteCommand(String commandAlias, List<Object> parameters = null)
+        virtual public void ExecuteCommand(String commandAlias, String requester, List<Object> parameters = null)
         {
             foreach(var dev in Devices)
             {
-                dev.ExecuteCommand(commandAlias, parameters);
+                var req = dev.ExecuteCommand(commandAlias, parameters);
+                req.Owner = requester;
             }
             
         }

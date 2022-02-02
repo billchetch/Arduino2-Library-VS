@@ -98,7 +98,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
+        protected const int BEGIN_ADMS_TIMER_INTERVAL = 30 * 1000;
         protected const int BEGIN_TIMEOUT = 8000;
         protected const int MAX_BEGIN_ATTEMPTS = 3;
         protected const int DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL = 30 * 1000;
@@ -389,12 +389,6 @@ namespace Chetch.Arduino2
         {
             base.OnClientConnect(cnn);
 
-            if(_adms.Count == 0)
-            {
-                Tracing?.TraceEvent(TraceEventType.Error, 0, "There are no ADMs in this service {0}!", ServiceName);
-                return;
-            }
-
             if(_beginADMsTimer == null)
             {
                 _beginADMsTimer = new System.Timers.Timer();
@@ -406,10 +400,26 @@ namespace Chetch.Arduino2
             }
         }
 
+        //create ADMs here ... note that you need to provide a check if all the required ADMs have been created
+        abstract protected void CreateADMs();
+
         private void OnBeginADMsTimer(Object sender, EventArgs earg)
         {
             _beginADMsTimer.Stop();
-
+            if (ServiceIsStopping) return;
+            
+            try
+            {
+                CreateADMs();
+            }
+            catch (Exception e)
+            {
+                _beginADMsTimer.Start();
+                Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: {0}", e.Message);
+                return;
+            }
+            
+            //begin the adms that are ready to begin
             foreach (var adm in _adms.Values)
             {
                 if (adm.State >= ArduinoDeviceManager.ADMState.BEGUN) continue;
@@ -440,6 +450,7 @@ namespace Chetch.Arduino2
                     }
                 } while (!admReadyToUse);
             }
+
             if (!ServiceIsStopping)
             {
                 _beginADMsTimer.Start();
@@ -522,7 +533,7 @@ namespace Chetch.Arduino2
                                 break;
 
                             case MessageSchema.COMMAND_PING:
-                                adm.Ping();
+                                adm.Ping(message.Sender);
                                 break;
 
                             case MessageSchema.COMMAND_LIST_DEVICES:
@@ -556,15 +567,19 @@ namespace Chetch.Arduino2
                                 switch (cmd)
                                 {
                                     case MessageSchema.COMMAND_STATUS:
-                                        device.RequestStatus();
-                                        schema.AddDevice(device);
+                                        device.RequestStatus(message.Sender);
+                                        break;
+
+                                    case MessageSchema.COMMAND_PING:
+                                        adm.Ping(message.Sender);
                                         break;
 
                                     case MessageSchema.COMMAND_LIST_COMMANDS:
                                         break;
 
                                     default:
-                                        device.ExecuteCommand(cmd, args);
+                                        var req = device.ExecuteCommand(cmd, args);
+                                        req.Owner = Client.Name;
                                         break;
                                 }
                             }
@@ -573,11 +588,11 @@ namespace Chetch.Arduino2
                                 switch (cmd)
                                 {
                                     case MessageSchema.COMMAND_STATUS:
-                                        deviceGroup.RequestStatus();
+                                        deviceGroup.RequestStatus(message.Sender);
                                         break;
 
                                     default:
-                                        deviceGroup.ExecuteCommand(cmd, args);
+                                        deviceGroup.ExecuteCommand(cmd, Client.Name, args);
                                         break;
                                 }
                             }
