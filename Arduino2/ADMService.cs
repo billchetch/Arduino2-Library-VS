@@ -98,47 +98,6 @@ namespace Chetch.Arduino2
             }
         }
 
-        public class Request
-        {
-            public const int DEFAULT_TTL = 30000; //milliseconds before expired
-
-            public String RequestID { get; internal set; }
-
-            public String Requester  { get; internal set; }
-
-            public DateTime Created { get; internal set; }
-
-            private int _ttl = -1;
-
-            public Request(String requestID, String requester, int ttl = DEFAULT_TTL)
-            {
-                RequestID = requestID;
-                Requester = requester;
-                _ttl = ttl;
-            }
-
-            virtual public bool HasExpired => _ttl <= 0 ? false : (DateTime.Now.Ticks - Created.Ticks / TimeSpan.TicksPerSecond) > _ttl;
-        }
-
-        public class ADMRequest : Request
-        {
-            public static String CreateRequestID(ArduinoDeviceManager adm, byte tag)
-            {
-                return adm.UID + "-" + tag;
-            }
-
-            private ArduinoDeviceManager _adm;
-            private byte _tag;
-
-            public ADMRequest(ArduinoDeviceManager adm, byte tag, String requester) : base(CreateRequestID(adm, tag), requester, -1)
-            {
-                _adm = adm;
-                _tag = tag;
-            }
-
-            public override bool HasExpired => _adm.Requests.IsAvailable(_tag);
-        }
-
         protected const int BEGIN_ADMS_TIMER_INTERVAL = 2 * 60 * 1000;
         protected const int BEGIN_TIMEOUT = 8000;
         protected const int MAX_BEGIN_ATTEMPTS = 3;
@@ -157,8 +116,7 @@ namespace Chetch.Arduino2
         private Dictionary<ArduinoObject, Message> _messagesToDispatch = new Dictionary<ArduinoObject, Message>();
         private Object _dispatchMessageLock = new object();
 
-        private Dictionary<String, Request> _requests = new Dictionary<String, Request>();
-
+        
         public ADMService(String clientName, String clientManagerSource, String serviceSource, String eventLog) : base(clientName, clientManagerSource, serviceSource, eventLog)
         {
             //empty 
@@ -370,6 +328,11 @@ namespace Chetch.Arduino2
             {
                 var message = new Message(propertyAttribute.IsError ? MessageType.ERROR : MessageType.DATA);
                 var schema = new MessageSchema(message);
+                var adm = GetADMFromArduinoObject(ao);
+                if (adm.ProcessingRequest != null)
+                {
+                    message.Target = adm.ProcessingRequest.Owner;
+                }
                 if (sender is ArduinoDevice)
                 {
                     schema.AddDevice((ArduinoDevice)sender);
@@ -387,55 +350,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        protected void AddRequest(Request request)
-        {
-            _requests[request.RequestID] = request;
-        }
-
-        protected void AddRequest(String requestID, Message request, int ttl = Request.DEFAULT_TTL)
-        {
-            AddRequest(new Request(requestID, request.Sender, ttl));
-        }
-
-        protected Request GetRequest(String requestID, bool removeIfExpired = true)
-        {
-            if (_requests.ContainsKey(requestID))
-            {
-                var req = _requests[requestID];
-                if (removeIfExpired && req.HasExpired)
-                {
-                    _requests.Remove(requestID);
-                }
-                return req;
-            } else
-            {
-                return null;
-            }
-        }
-
-        protected void PurgeExpiredRequests()
-        {
-            List<String> toPurge = new List<String>();
-            foreach(var r in _requests.Values)
-            {
-                if (r.HasExpired) toPurge.Add(r.RequestID);
-            }
-            foreach(var rid in toPurge)
-            {
-                _requests.Remove(rid);
-            }
-        }
-
-        protected void AddRequest(ArduinoDeviceManager adm, byte tag, Message request)
-        {
-            AddRequest(new ADMRequest(adm, tag, request.Sender));
-        }
-
-        protected ADMRequest GetRequest(ArduinoDeviceManager adm, byte tag)
-        {
-            return (ADMRequest)GetRequest(ADMRequest.CreateRequestID(adm, tag));
-        }
-
+        
         protected void DispatchMessage(ArduinoObject ao, Message message)
         {
             lock (_dispatchMessageLock)
@@ -448,23 +363,16 @@ namespace Chetch.Arduino2
                 Thread.Sleep(1);
                 lock (_dispatchMessageLock)
                 {
-                    foreach(var kv in _messagesToDispatch)
+                    foreach(var msg in _messagesToDispatch.Values)
                     {
-                        byte tag = kv.Key.LastMessagedHandled == null ? (byte)0 : kv.Key.LastMessagedHandled.Tag;
-                        ADMRequest req = null;
-                        if (tag > 0) 
+                        //if the message has a target we ensure it is sent to them in case they aren't a subscriber
+                        if (message.Target != null)
                         {
-                            var adm = GetADMFromArduinoObject(kv.Key);
-                            req = GetRequest(adm, tag);
+                            SendMessage(msg);
                         }
-                        if (req == null || req.HasExpired)
-                        {
-                            Broadcast(kv.Value);
-                        } else
-                        {
-                            kv.Value.Target = req.Requester;
-                            SendMessage(kv.Value);
-                        }
+
+                        //we always broadcast to any listeners
+                        Broadcast(msg);
                     }
 
                     _messagesToDispatch.Clear();
