@@ -109,6 +109,7 @@ namespace Chetch.Arduino2
 
         private System.Timers.Timer _beginADMsTimer;
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
+        private List<ArduinoObject> _aos = new List<ArduinoObject>(); //list of arduino objects created, serialized and event handler attached
         
         private System.Timers.Timer _logSnapshotTimer;
         protected int LogSnapshotTimerInterval { get; set; } = DEFAULT_LOG_SNAPSHOPT_TIMER_INTERVAL;
@@ -175,26 +176,18 @@ namespace Chetch.Arduino2
         {
             if (ServiceDB != null)
             {
-                List<ArduinoObject> aoToInitialise = GetArduinoObjects();
-                foreach (var ao in aoToInitialise)
-                {
-                    //Add handler so we can respond to property changes
-                    ao.PropertyChanged += HandleADMPropertyChange;
-
-                    //deserialize if there is 
-                    SysInfo si = ServiceDB.GetSysInfo(ao.UID);
-                    if (si != null)
-                    {
-                        ao.Deserialize(si.DataValue);
-                    }
-                }
+                
 
                 if(_logSnapshotTimer == null)
                 {
                     _logSnapshotTimer = new System.Timers.Timer(LogSnapshotTimerInterval);
                     _logSnapshotTimer.Elapsed += OnLogSnapshotTimer;
                 }
-                _logSnapshotTimer.Start();
+
+                if (!_logSnapshotTimer.Enabled)
+                {
+                    _logSnapshotTimer.Start();
+                }
             }
 
             base.OnStart(args);
@@ -365,13 +358,7 @@ namespace Chetch.Arduino2
                 {
                     foreach(var msg in _messagesToDispatch.Values)
                     {
-                        //if the message has a target we ensure it is sent to them in case they aren't a subscriber
-                        if (message.Target != null)
-                        {
-                            SendMessage(msg);
-                        }
-
-                        //we always broadcast to any listeners
+                        //this will send to all subscribers and if the message has a target will send to that target as well
                         Broadcast(msg);
                     }
 
@@ -411,6 +398,27 @@ namespace Chetch.Arduino2
             try
             {
                 CreateADMs();
+
+                List<ArduinoObject> aoToInitialise = GetArduinoObjects();
+                foreach (var ao in aoToInitialise)
+                {
+                    if (_aos.Contains(ao)) continue;
+
+                    //Add handler so we can respond to property changes
+                    ao.PropertyChanged += HandleADMPropertyChange;
+
+                    if (ServiceDB != null)
+                    {
+                        //deserialize
+                        SysInfo si = ServiceDB.GetSysInfo(ao.UID);
+                        if (si != null)
+                        {
+                            ao.Deserialize(si.DataValue);
+                        }
+                    }
+
+                    _aos.Add(ao);
+                }
             }
             catch (Exception e)
             {

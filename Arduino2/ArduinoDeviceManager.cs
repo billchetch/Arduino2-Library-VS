@@ -200,18 +200,18 @@ namespace Chetch.Arduino2
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
-        public DateTime LastMessageReceived { get; internal set; }
+        public DateTime LastMessageReceivedOn { get; internal set; }
 
         private System.Timers.Timer _synchroniseTimer;
 
-        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
         public DateTime LastStatusResponseOn
         {
             get { return Get<DateTime>(); }
             set { Set(value, IsReady, IsReady); }
         }
 
-        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
         public DateTime LastPingResponseOn
         {
             get { return Get<DateTime>(); }
@@ -475,7 +475,7 @@ namespace Chetch.Arduino2
                 f.Add(e.DataBlock);
                 f.Validate();
                 message = ADMMessage.Deserialize(f.Payload);
-                LastMessageReceived = DateTime.Now;
+                LastMessageReceivedOn = DateTime.Now;
 
                 //use tag to get current request and release it for future use
                 ProcessingRequest = Requests.Release(message.Tag);
@@ -913,7 +913,7 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(LastMessageReceived != default(DateTime) && (DateTime.Now - LastMessageReceived).TotalMilliseconds > InactivityTimeout)
+            } else if(LastMessageReceivedOn != default(DateTime) && (DateTime.Now - LastMessageReceivedOn).TotalMilliseconds > InactivityTimeout)
             {
                 try
                 {
@@ -962,7 +962,7 @@ namespace Chetch.Arduino2
                 req = Requests.AddRequest(requester);
                 tag = req.Tag;
             }
-            var message = CreateMessage(MessageType.PING);
+            var message = CreateMessage(MessageType.PING, tag);
             SendMessage(message);
             return req;
         }
