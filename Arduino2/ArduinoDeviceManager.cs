@@ -120,6 +120,8 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         override public String UID => ID;
 
+        public override string Description => String.Format("{0} {1}, {2} devices, {3} groups", UID, State, _devices.Count, _deviceGroups.Count);
+
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 

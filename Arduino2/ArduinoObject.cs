@@ -38,6 +38,8 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         abstract public String UID { get; }
 
+        abstract public String Description { get; }
+
         [ArduinoProperty(PropertyAttribute.ERROR, null)]
         public String Error
         {

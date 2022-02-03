@@ -545,6 +545,25 @@ namespace Chetch.Arduino2
                                 break;
 
                             case MessageSchema.COMMAND_LIST_DEVICES:
+                                var devs = adm.GetDevices();
+                                List<String> devDescs = new List<String>();
+                                foreach (var dev in devs) 
+                                {
+                                    devDescs.Add(dev.Description);
+                                }
+                                response.AddValue("ADM", adm.Description);
+                                response.AddValue("Devices", devDescs);
+                                break;
+
+                            case MessageSchema.COMMAND_LIST_GROUPS:
+                                var dgs = adm.GetDeviceGroups();
+                                List<String> dgDescs = new List<String>();
+                                response.AddValue("ADM", adm.Description);
+                                foreach (var dg in dgs)
+                                {
+                                    dgDescs.Add(dg.Description);
+                                }
+                                response.AddValue("DeviceGroups", dgDescs);
                                 break;
 
                             default:
@@ -579,10 +598,17 @@ namespace Chetch.Arduino2
                                         break;
 
                                     case MessageSchema.COMMAND_PING:
-                                        adm.Ping(message.Sender);
+                                        device.Ping(message.Sender);
                                         break;
 
                                     case MessageSchema.COMMAND_LIST_COMMANDS:
+                                        response.AddValue("Device", device.Description);
+                                        List<String> commandDescs = new List<String>();
+                                        foreach(var c in device.Commands)
+                                        {
+                                            commandDescs.Add(String.Format("{0} {1}", c.Alias, c.IsCompound ? "Compound" : "Atomic"));
+                                        }
+                                        response.AddValue("Commands", commandDescs);
                                         break;
 
                                     default:

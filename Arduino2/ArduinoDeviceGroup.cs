@@ -19,6 +19,8 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public String Name { get; internal set; }
 
+        override public String Description => String.Format("{0} {1}, {2} devices", UID, Name, Devices.Count);
+
         public List<ArduinoDevice> Devices { get; internal set; } = new List<ArduinoDevice>();
 
         //use the Enable method to set this value

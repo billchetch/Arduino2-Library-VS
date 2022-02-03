@@ -25,6 +25,8 @@ namespace Chetch.Arduino2.Devices
 
         public SwitchMode Mode { get; internal set; }
 
+        public override string Description => String.Format("{0} {1}, Pin={2}, Pos={3}", base.Description, Mode, Pin, Position);
+
         public bool IsActive => Mode == SwitchMode.ACTIVE;
         public bool IsPassive => Mode == SwitchMode.PASSIVE;
 
