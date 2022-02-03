@@ -82,12 +82,18 @@ namespace Chetch.Arduino2
 
         public static ArduinoDeviceManager Create(String boardName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
-            var ports = SerialPorts.Find(boardName);
-            var serial = new ArduinoSerialConnection(ports[0], baudRate);
-            var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
-            var adm = new ArduinoDeviceManager(sfc, connectTimeout);
-            adm.ID = ports[0];
-            return adm;
+            try
+            {
+                var ports = SerialPorts.Find(boardName);
+                var serial = new ArduinoSerialConnection(ports[0], baudRate);
+                var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
+                var adm = new ArduinoDeviceManager(sfc, connectTimeout);
+                adm.ID = ports[0];
+                return adm;
+            } catch(Exception e)
+            {
+                throw new Exception(String.Format("Cannot create Serial Connection ADM {0}: {1}", boardName, e.Message));
+            }
         }
 
         //Usually a single board will register itself as a unique service using the 'hostname' of the board connection as the service
@@ -96,11 +102,17 @@ namespace Chetch.Arduino2
         //thereby connecting to the board 'unohost'
         public static ArduinoDeviceManager Create(String serviceName, String networkServiceURL, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
-            var cnn = new ArduinoTCPConnection(serviceName, networkServiceURL);
-            var sfc = new StreamFlowController(cnn, localUartSize, remoteUartSize);
-            var adm = new ArduinoDeviceManager(sfc, connectTimeout);
-            adm.ID = serviceName;
-            return adm;
+            try
+            {
+                var cnn = new ArduinoTCPConnection(serviceName, networkServiceURL);
+                var sfc = new StreamFlowController(cnn, localUartSize, remoteUartSize);
+                var adm = new ArduinoDeviceManager(sfc, connectTimeout);
+                adm.ID = serviceName;
+                return adm;
+            } catch (Exception e) 
+            { 
+                throw new Exception(String.Format("Cannot create TCP Connection ADM {0}: {1}", serviceName, e.Message));
+            }
         }
 
         public TraceSource Tracing { get; set; } = null;
