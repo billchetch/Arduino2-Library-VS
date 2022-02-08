@@ -388,7 +388,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        //create ADMs here ... note that you need to provide a check if all the required ADMs have been created
+        //create ADMs here ...if all the required adms have been created return true otherwise return false or throw an exception
         abstract protected bool CreateADMs();
 
         private void OnBeginADMsTimer(Object sender, EventArgs earg)
