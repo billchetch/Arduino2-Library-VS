@@ -136,7 +136,7 @@ namespace Chetch.Arduino2
             Name = name.ToUpper();
 
             AddCommand(ArduinoCommand.DeviceCommand.ENABLE, ArduinoCommand.ParameterType.BOOL);
-            AddCommand(ArduinoCommand.DeviceCommand.DISABLE, ArduinoCommand.ParameterType.BOOL);
+            AddCommand(ArduinoCommand.DeviceCommand.DISABLE);
             AddCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, ArduinoCommand.ParameterType.INT);
 
             State = DeviceState.CREATED;

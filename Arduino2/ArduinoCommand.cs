@@ -42,6 +42,9 @@ namespace Chetch.Arduino2
             DISPLAY,
             CLEAR,
             SILENCE,
+            SEND,
+            TRANSMIT,
+            SAVE,
         }
 
         public enum ParameterType
@@ -141,6 +144,12 @@ namespace Chetch.Arduino2
                 Parameters.RemoveAt(Parameters.Count - 1);
                 throw e;
             }
+        }
+
+        public void AddParameter(ParameterType parameterType, Object parameter)
+        {
+            AddParameterType(parameterType);
+            AddParameter(parameter);
         }
 
         public void AddParameters(params Object[] parameters)

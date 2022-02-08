@@ -65,6 +65,7 @@
     <Compile Include="ADMRequestManager.cs" />
     <Compile Include="ADMService.cs" />
     <Compile Include="ADMServiceDB.cs" />
+    <Compile Include="ArduinoCommandsDB.cs" />
     <Compile Include="ArduinoDeviceGroup.cs" />
     <Compile Include="ArduinoCommand.cs" />
     <Compile Include="ArduinoDevice.cs" />
@@ -76,6 +77,14 @@
     <Compile Include="Devices\Counter.cs" />
     <Compile Include="Devices\Displays\LCD.cs" />
     <Compile Include="Devices\Electricity\ZMPT101B.cs" />
+    <Compile Include="Devices\Infrared\IRDB.cs" />
+    <Compile Include="Devices\Infrared\IRDevice.cs" />
+    <Compile Include="Devices\Infrared\IRGenericReceiver.cs" />
+    <Compile Include="Devices\Infrared\IRGenericTransmitter.cs" />
+    <Compile Include="Devices\Infrared\IRLGHomeTheater.cs" />
+    <Compile Include="Devices\Infrared\IRReceiver.cs" />
+    <Compile Include="Devices\Infrared\IRSamsungTV.cs" />
+    <Compile Include="Devices\Infrared\IRTransmitter.cs" />
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Devices\Temperature\DS18B20Array.cs" />
