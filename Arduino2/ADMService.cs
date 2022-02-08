@@ -108,6 +108,7 @@ namespace Chetch.Arduino2
         protected bool ServiceIsStopping { get; private set; } = false;
 
         private System.Timers.Timer _beginADMsTimer;
+        private bool _admsCreated = false;
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
         private List<ArduinoObject> _aos = new List<ArduinoObject>(); //list of arduino objects created, serialized and event handler attached
         
@@ -388,43 +389,46 @@ namespace Chetch.Arduino2
         }
 
         //create ADMs here ... note that you need to provide a check if all the required ADMs have been created
-        abstract protected void CreateADMs();
+        abstract protected bool CreateADMs();
 
         private void OnBeginADMsTimer(Object sender, EventArgs earg)
         {
             _beginADMsTimer.Stop();
             if (ServiceIsStopping) return;
-            
-            try
-            {
-                CreateADMs();
 
-                List<ArduinoObject> aoToInitialise = GetArduinoObjects();
-                foreach (var ao in aoToInitialise)
+            if (!_admsCreated)
+            {
+                try
                 {
-                    if (_aos.Contains(ao)) continue;
+                    _admsCreated = CreateADMs();
 
-                    //Add handler so we can respond to property changes
-                    ao.PropertyChanged += HandleADMPropertyChange;
-
-                    if (ServiceDB != null)
+                    List<ArduinoObject> aoToInitialise = GetArduinoObjects();
+                    foreach (var ao in aoToInitialise)
                     {
-                        //deserialize
-                        SysInfo si = ServiceDB.GetSysInfo(ao.UID);
-                        if (si != null)
-                        {
-                            ao.Deserialize(si.DataValue);
-                        }
-                    }
+                        if (_aos.Contains(ao)) continue;
 
-                    _aos.Add(ao);
+                        //Add handler so we can respond to property changes
+                        ao.PropertyChanged += HandleADMPropertyChange;
+
+                        if (ServiceDB != null)
+                        {
+                            //deserialize
+                            SysInfo si = ServiceDB.GetSysInfo(ao.UID);
+                            if (si != null)
+                            {
+                                ao.Deserialize(si.DataValue);
+                            }
+                        }
+
+                        _aos.Add(ao);
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                _beginADMsTimer.Start();
-                Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: {0}", e.Message);
-                return;
+                catch (Exception e)
+                {
+                    _beginADMsTimer.Start();
+                    Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: {0}", e.Message);
+                    return;
+                }
             }
             
             //begin the adms that are ready to begin
