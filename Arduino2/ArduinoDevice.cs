@@ -349,6 +349,39 @@ namespace Chetch.Arduino2
             return AddCommand(deviceCommand, deviceCommand.ToString(), parameterTypes);
         }
 
+        public ArduinoCommand AddCompoundCommand(String alias, int delayBetweenCommands, params String[] commandAliases)
+        {
+            ArduinoCommand cmd = AddCommand(ArduinoCommand.DeviceCommand.COMPOUND, alias);
+            for(int i = 0; i < commandAliases.Length; i++)
+            {
+                String ca = commandAliases[i];
+                ArduinoCommand c = GetCommand(ca);
+                if(c != null)
+                {
+                    cmd.AddCommand(c);
+                    if(delayBetweenCommands > 0 && i < commandAliases.Length - 1)
+                    {
+                        cmd.AddCommand(ArduinoCommand.Delay(delayBetweenCommands));
+                    }
+                }
+            }
+            return cmd;
+        }
+
+        public ArduinoCommand AddCompoundCommand(String alias, params String[] commandAliases)
+        {
+            return AddCompoundCommand(alias, 0, commandAliases);
+        }
+
+        virtual public void AddCommands(List<ArduinoCommand> commands, bool clear = false)
+        {
+            if (clear)
+            {
+                Commands.Clear();
+            }
+            Commands.AddRange(commands);
+        }
+
         protected ArduinoCommand GetCommand(String alias)
         {
             alias = alias.Trim().ToLower().Replace('_','-');
@@ -360,8 +393,12 @@ namespace Chetch.Arduino2
             return GetCommand(command.ToString());
         }
 
+
+        /// <summary>
+        /// All public commands should go throw this public command
+        /// </summary>
         private Task _executeCommandTask = null;
-        public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)
+        virtual public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)
         {
             if (!IsReady)
             {
@@ -418,6 +455,7 @@ namespace Chetch.Arduino2
             return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
         }
 
+        //The preferred single public method calls this protected method
         virtual protected void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<Object> parameters = null)
         {
             for (int i = 0; i < cmd.Repeat; i++)

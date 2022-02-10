@@ -8,26 +8,18 @@ namespace Chetch.Arduino2.Devices.Infrared
 {
     public class IRGenericTransmitter : IRTransmitter
     {
-        public IRGenericTransmitter(String id, String name, int enablePin, int transmitPin, IRDB db = null) : base(id, name, enablePin, transmitPin, db){}
+        public IRGenericTransmitter(String id, String name, int enablePin, int transmitPin = 0, IRDB db = null) : base(id, name, enablePin, transmitPin, db){}
 
-        public IRGenericTransmitter(int enablePin, int transmitPin, IRDB db = null) : base(enablePin, transmitPin, db) { }
+        public IRGenericTransmitter(int enablePin, int transmitPin = 0, IRDB db = null) : base(enablePin, transmitPin, db) { }
 
-        public override void AddCommands(List<ArduinoCommand> commands)
+        public override void AddCommands(List<ArduinoCommand> commands, bool clear = false)
         {
-            base.AddCommands(commands);
+            base.AddCommands(commands, clear);
 
             if (commands.Count > 0)
             {
-                TryAddCommand("Unmute", "Volume_Up,Volume_Down", 500);
-                TryAddCommand("Mute", "Unmute,Mute/Unmute", 500);
-
-                TryAddCommand("TestChannelSet", "1,1", 500);
-                TryAddCommand("TestVolumeUp", "Volume_Up", 500, 4);
-                TryAddCommand("TestVolumeDown", "Volume_Down", 500, 4);
-                TryAddCommand("TestChannelUp", "Channel_Up", 500, 4);
-                TryAddCommand("TestChannelDown", "Channel_Down", 500, 4);
-                TryAddCommand("TestMain", "TestChannelSet,TestVolumeUp,TestChannelDown,TestVolumeDown,TestChannelUp", 5000);
-                TryAddCommand("Test", "On/Off,TestMain,On/Off", 10000);
+                AddCompoundCommand("Unmute", 500, "Volume_Up", "Volume_Down");
+                AddCompoundCommand("Mute", 500, "Unmute", "Mute/Unmute");
             }
         }
     }

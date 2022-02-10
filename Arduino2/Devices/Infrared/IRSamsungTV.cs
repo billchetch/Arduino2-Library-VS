@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Chetch.Arduino.Devices.Infrared
+namespace Chetch.Arduino2.Devices.Infrared
 {
     public class IRSamsungTV : IRTransmitter
     {

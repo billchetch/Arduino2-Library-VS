@@ -143,23 +143,41 @@ namespace Chetch.Arduino2.Devices.Infrared
             processUnknownCode(commandName, _unknownCodes.Values.First());
         }
 
+
+        protected override int GetArgumentIndex(string fieldName, ADMMessage message)
+        {
+            switch (fieldName)
+            {
+                case "Code":
+                    return 1;
+                case "Protocol":
+                    return 2;
+                case "Bits":
+                    return 3;
+
+                default:
+                    return base.GetArgumentIndex(fieldName, message);
+            }
+        }
+
         public override void HandleMessage(ADMMessage message)
         {
             if (!IsReady) return;
 
-            /*switch (message.Type)
+            switch (message.Type)
             {
                 case Messaging.MessageType.DATA:
-                    if(message.HasValues("Code","Protocol","Bits"))
+                    if(_receiving)
                     {
-                        long ircode = message.GetLong("Code");
-                        int protocol = message.GetInt("Protocol");
-                        int bits = message.GetInt("Bits");
+                        long ircode = GetMessageValue<long>("Code", message); 
+                        int protocol = GetMessageValue<int>("Protocol", message);
+                        int bits = GetMessageValue<int>("Bits", message);
 
                         processCode(ircode, protocol, bits);
                     }
                     break;
-            }*/
+            }
+
             base.HandleMessage(message);
         }
 

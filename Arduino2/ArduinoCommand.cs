@@ -45,6 +45,7 @@ namespace Chetch.Arduino2
             SEND,
             TRANSMIT,
             SAVE,
+            OTHER, //Use this if you want an alias based command only
         }
 
         public enum ParameterType

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Chetch.Arduino.Devices.Infrared
+namespace Chetch.Arduino2.Devices.Infrared
 {
     public class IRLGHomeTheater : IRTransmitter
     {
@@ -15,12 +15,12 @@ namespace Chetch.Arduino.Devices.Infrared
             DeviceName = DEVICE_NAME;
         }
 
-        public override void AddCommands(List<ArduinoCommand> commands)
+        public override void AddCommands(List<ArduinoCommand> commands, bool clear = false)
         {
-            base.AddCommands(commands);
+            base.AddCommands(commands, clear);
 
-            AddCommand("Unmute", new String[] { "Volume_up", "Volume_down" });
-            AddCommand("Mute", new String[] { "Unmute", "Mute/Unmute" });
+            AddCompoundCommand("Unmute", "Volume_up", "Volume_down" );
+            AddCompoundCommand("Mute", "Unmute", "Mute/Unmute");
         }
     }
 }

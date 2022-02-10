@@ -8,7 +8,7 @@ namespace Chetch.Arduino2.Devices.Infrared
 {
     public abstract class IRTransmitter : IRDevice
     {
-        private bool _enabled = false;
+        private bool _active = false;
         private int _enablePin; //HIGH output means the transmitter is disabled (as there is no voltage across it)
         private int _transmitPin;
 
@@ -18,7 +18,7 @@ namespace Chetch.Arduino2.Devices.Infrared
         public int RepeatInterval { get; set; } = 200;
         public bool UseRepeatCommand = true;
         
-        public IRTransmitter(String id, String name, int enablePin, int transmitPin, IRDB db = null) : base(id, name, db)
+        public IRTransmitter(String id, String name, int enablePin, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
             Category = DeviceCategory.IR_TRANSMITTER;
 
@@ -27,59 +27,40 @@ namespace Chetch.Arduino2.Devices.Infrared
             
         }
 
-        public IRTransmitter(int enablePin, int transmitPin, IRDB db = null) : this("irt" + enablePin, "IRT", enablePin, transmitPin, db) { }
+        public IRTransmitter(int enablePin, int transmitPin = 0, IRDB db = null) : this("irt" + enablePin, "IRT", enablePin, transmitPin, db) { }
 
         public override void ReadDevice()
         {
             base.ReadDevice();
             if(DB != null)
             {
-                Commands.Clear();
-                Commands.AddRange(DB.GetCommands(DeviceName));
-
+                AddCommands(DB.GetCommands(DeviceName), true);
                 _repeatCommand = GetCommand(REPEAT_COMMAND);
             }
         }
 
 
-        override public void ExecuteCommand(String commandAlias, ExecutionArguments xargs)
+        public override ADMRequestManager.ADMRequest ExecuteCommand(string commandAlias, List<object> parameters = null)
         {
-            if(commandAlias.Length == 2 && uint.TryParse(commandAlias, out _))
+            if (commandAlias.Length == 2 && uint.TryParse(commandAlias, out _))
             {
                 //split a 2 digit number in to it's components ... this is so we can have commands like 62
                 //without needing to build a new command from '6' and from '2'
                 int d1 = (int)char.GetNumericValue(commandAlias[0]);
                 int d2 = (int)char.GetNumericValue(commandAlias[1]);
 
-                base.ExecuteCommand(d1.ToString(), xargs);
+                base.ExecuteCommand(d1.ToString(), parameters);
                 System.Threading.Thread.Sleep(RepeatInterval * 2);
-                base.ExecuteCommand(d2.ToString(), xargs);
-            } else
+                base.ExecuteCommand(d2.ToString(), parameters);
+                return null;
+            }
+            else
             {
-                base.ExecuteCommand(commandAlias, xargs);
+                return base.ExecuteCommand(commandAlias, parameters);
             }
         }
 
-        override protected void ExecuteCommand(ArduinoCommand command, ExecutionArguments xargs)
-        {
-            if(!_enabled){
-                List<ArduinoDevice> devices = Mgr.GetDevicesByPin(_transmitPin);
-
-                foreach (var device in devices)
-                {
-                    if (device is IRTransmitter && device != this)
-                    {
-                        ((IRTransmitter)device).Disable();
-                    }
-                }
-
-                Enable();
-            }
-
-            base.ExecuteCommand(command, xargs);
-        }
-
-        override protected void SendCommand(ArduinoCommand command, ExecutionArguments xargs)
+        /*override protected void SendCommand(ArduinoCommand command, ExecutionArguments xargs)
         {
             if(command.Type == ArduinoCommand.CommandType.SEND && Protocol != IRProtocol.UNKNOWN && command.Arguments.Count == 3)
             {
@@ -96,20 +77,28 @@ namespace Chetch.Arduino2.Devices.Infrared
             {
                 base.SendCommand(command, xargs);
             }
+        }*/
+        protected override int GetArgumentIndex(string fieldName, ADMMessage message)
+        {
+            switch(fieldName)
+            {
+                case "TransmitPin":
+                    return 2;
+
+                default:
+                    return base.GetArgumentIndex(fieldName, message);
+            }
         }
 
-        public override void HandleMessage(ADMMessage message)
+        protected override void OnConfigured(ADMMessage message)
         {
-            //check if the transmit pin is viable
-            if(_transmitPin == ArduinoPin.BOARD_SPECIFIED && message.HasValue("TP"))
+            base.OnConfigured(message);
+
+            if (_transmitPin == 0)
             {
-                int tp = message.GetInt("TP");
-                ConfigurePin(tp, PinMode.PwmOutput);
-                Mgr.UpdateDevice(this);
+                int tp = GetMessageValue<int>("TransmitPin", message);
                 _transmitPin = tp;
             }
-
-            base.HandleMessage(message);
         }
     }
 }
