@@ -553,19 +553,19 @@ namespace Chetch.Arduino2
                                 List<String> devDescs = new List<String>();
                                 foreach (var dev in devs) 
                                 {
-                                    devDescs.Add(dev.Description);
+                                    devDescs.Add(dev.ToString());
                                 }
-                                response.AddValue("ADM", adm.Description);
+                                response.AddValue("ADM", adm.ToString());
                                 response.AddValue("Devices", devDescs);
                                 break;
 
                             case MessageSchema.COMMAND_LIST_GROUPS:
                                 var dgs = adm.GetDeviceGroups();
                                 List<String> dgDescs = new List<String>();
-                                response.AddValue("ADM", adm.Description);
+                                response.AddValue("ADM", adm.ToString());
                                 foreach (var dg in dgs)
                                 {
-                                    dgDescs.Add(dg.Description);
+                                    dgDescs.Add(dg.ToString());
                                 }
                                 response.AddValue("DeviceGroups", dgDescs);
                                 break;
@@ -606,7 +606,7 @@ namespace Chetch.Arduino2
                                         break;
 
                                     case MessageSchema.COMMAND_LIST_COMMANDS:
-                                        response.AddValue("Device", device.Description);
+                                        response.AddValue("Device", device.ToString());
                                         List<String> commandDescs = new List<String>();
                                         foreach(var c in device.Commands)
                                         {

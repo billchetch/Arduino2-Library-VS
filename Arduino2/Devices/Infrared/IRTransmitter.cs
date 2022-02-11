@@ -9,7 +9,7 @@ namespace Chetch.Arduino2.Devices.Infrared
     public abstract class IRTransmitter : IRDevice
     {
         private bool _active = false;
-        private int _enablePin; //HIGH output means the transmitter is disabled (as there is no voltage across it)
+        private int _activatePin; //HIGH output means the transmitter is disabled (as there is no voltage across it)
         private int _transmitPin;
 
         //if last command is same as current command and time diff (millis) between last command and current command
@@ -18,16 +18,16 @@ namespace Chetch.Arduino2.Devices.Infrared
         public int RepeatInterval { get; set; } = 200;
         public bool UseRepeatCommand = true;
         
-        public IRTransmitter(String id, String name, int enablePin, int transmitPin = 0, IRDB db = null) : base(id, name, db)
+        public IRTransmitter(String id, String name, int activatePin, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
             Category = DeviceCategory.IR_TRANSMITTER;
 
-            _enablePin = enablePin;
+            _activatePin = activatePin;
             _transmitPin = transmitPin;
             
         }
 
-        public IRTransmitter(int enablePin, int transmitPin = 0, IRDB db = null) : this("irt" + enablePin, "IRT", enablePin, transmitPin, db) { }
+        public IRTransmitter(int activatePin, int transmitPin = 0, IRDB db = null) : this("irt" + activatePin, "IRT", activatePin, transmitPin, db) { }
 
         public override void ReadDevice()
         {
@@ -58,6 +58,16 @@ namespace Chetch.Arduino2.Devices.Infrared
             {
                 return base.ExecuteCommand(commandAlias, parameters);
             }
+        }
+
+        public ADMRequestManager.ADMRequest Activate()
+        {
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
+        }
+
+        public ADMRequestManager.ADMRequest Deactivate()
+        {
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
         }
 
         /*override protected void SendCommand(ArduinoCommand command, ExecutionArguments xargs)

@@ -74,8 +74,6 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public String Name { get; internal set; }
 
-        override public String Description => String.Format("{0} {1}", UID, Name);
-
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         public byte BoardID { get; internal set; }
 
@@ -140,6 +138,11 @@ namespace Chetch.Arduino2
             AddCommand(ArduinoCommand.DeviceCommand.SET_REPORT_INTERVAL, ArduinoCommand.ParameterType.INT);
 
             State = DeviceState.CREATED;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1}", UID, Name);
         }
 
         protected ADMMessage CreateMessage(MessageType messageType)

@@ -25,8 +25,6 @@ namespace Chetch.Arduino2.Devices
 
         public SwitchMode Mode { get; internal set; }
 
-        public override string Description => String.Format("{0} {1}, Pin={2}, Pos={3}", base.Description, Mode, Pin, Position);
-
         public bool IsActive => Mode == SwitchMode.ACTIVE;
         public bool IsPassive => Mode == SwitchMode.PASSIVE;
 
@@ -60,7 +58,6 @@ namespace Chetch.Arduino2.Devices
         private readonly Object _durationTimerLock = new Object();
         private bool _durationTimerCancelled = false;
 
-
         public byte Pin { get; internal set; }
 
         public int Tolerance { get; internal set; } = 0;
@@ -88,6 +85,8 @@ namespace Chetch.Arduino2.Devices
 
         public SwitchDevice(String id, SwitchMode mode, byte pin, int tolerance, String name = DEFAULT_NAME) : this(id, mode, pin, SwitchPosition.OFF, tolerance, name)
         {}
+
+        public override string ToString() { return String.Format("{0} {1}, Pin={2}, Pos={3}", base.ToString(), Mode, Pin, Position); }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {

@@ -120,8 +120,6 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.IDENTIFIER)]
         override public String UID => ID;
 
-        public override string Description => String.Format("{0} {1}, {2} devices, {3} groups", UID, State, _devices.Count, _deviceGroups.Count);
-
         private StreamFlowController _sfc;
         private int _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
@@ -252,6 +250,11 @@ namespace Chetch.Arduino2
             _sfc.EventByteSent += HandleStreamEventByteSent;
             _connectTimeout = connectTimeout;
             State = ADMState.CREATED;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1}, {2} devices, {3} groups", UID, State, _devices.Count, _deviceGroups.Count);
         }
 
         override public void Serialize(Dictionary<String, Object> vals)
