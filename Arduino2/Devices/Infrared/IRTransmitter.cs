@@ -18,7 +18,7 @@ namespace Chetch.Arduino2.Devices.Infrared
         public int RepeatInterval { get; set; } = 200;
         public bool UseRepeatCommand = true;
         
-        public IRTransmitter(String id, String name, int activatePin, int transmitPin = 0, IRDB db = null) : base(id, name, db)
+        public IRTransmitter(String id, String name, int activatePin = 0, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
             Category = DeviceCategory.IR_TRANSMITTER;
 
@@ -27,7 +27,9 @@ namespace Chetch.Arduino2.Devices.Infrared
             
         }
 
-        public IRTransmitter(int activatePin, int transmitPin = 0, IRDB db = null) : this("irt" + activatePin, "IRT", activatePin, transmitPin, db) { }
+        public IRTransmitter(int activatePin = 0, int transmitPin = 0, IRDB db = null) : this("irt" + activatePin, "IRT", activatePin, transmitPin, db) { }
+
+        public IRTransmitter(IRDB db) : this(0, 0, db) { }
 
         public override void ReadDevice()
         {
@@ -39,6 +41,13 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
+        protected override void AddConfig(ADMMessage message)
+        {
+            base.AddConfig(message);
+
+            message.AddArgument(_activatePin);
+            message.AddArgument(_transmitPin);
+        }
 
         public override ADMRequestManager.ADMRequest ExecuteCommand(string commandAlias, List<object> parameters = null)
         {
