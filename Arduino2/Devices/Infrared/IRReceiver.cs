@@ -40,7 +40,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             ArduinoCommand cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.START);
             AddCommand(cmd);
 
-            cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.START); 
+            cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.STOP); 
             AddCommand(cmd);
 
             cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.SAVE);
@@ -64,7 +64,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             if (cmd != null)
             {
                 long code = System.Convert.ToInt64(cmd.Parameters[0]);
-                _ignoreCodes.Add(code);
+                if(!_ignoreCodes.Contains(code))_ignoreCodes.Add(code);
             }
         }
 
@@ -162,8 +162,6 @@ namespace Chetch.Arduino2.Devices.Infrared
 
         public override void HandleMessage(ADMMessage message)
         {
-            if (!IsReady) return;
-
             switch (message.Type)
             {
                 case Messaging.MessageType.DATA:

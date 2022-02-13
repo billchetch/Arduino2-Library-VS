@@ -74,7 +74,7 @@ namespace Chetch.Arduino2.Devices.Infrared
 
         protected override ArduinoCommand CreateCommand(string deviceName, DBRow row)
         {
-            var command = new ArduinoCommand(ArduinoCommand.DeviceCommand.SEND, (String)row["command_alias"]);
+            var command = new ArduinoCommand(row.ID, ArduinoCommand.DeviceCommand.SEND, (String)row["command_alias"]);
             switch (Encoding)
             {
                 case IREncoding.HEX:

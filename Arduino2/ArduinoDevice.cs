@@ -266,7 +266,7 @@ namespace Chetch.Arduino2
         {   
             switch (message.Type)
             {
-                case Messaging.MessageType.ERROR:
+                case MessageType.ERROR:
                     //TODO: run this through GetArgumentIndex and then use GetMessageValue ... include subcode as well
                     String error;
                     String info;
@@ -380,20 +380,41 @@ namespace Chetch.Arduino2
         {
             if (clear)
             {
-                Commands.Clear();
+                _commands.Clear();
             }
-            Commands.AddRange(commands);
+            foreach (var cmd in commands)
+            {
+                AddCommand(cmd);
+            }
         }
 
         protected ArduinoCommand GetCommand(String alias)
         {
-            alias = alias.Trim().ToLower().Replace('_','-');
+            alias = ArduinoCommand.FormatAlias(alias);
             return _commands.ContainsKey(alias) ? _commands[alias] : null;
         }
 
         protected ArduinoCommand GetCommand(ArduinoCommand.DeviceCommand command)
         {
             return GetCommand(command.ToString());
+        }
+
+        public bool RemoveCommand(String alias)
+        {
+            alias = ArduinoCommand.FormatAlias(alias);
+            if (_commands.ContainsKey(alias))
+            {
+                _commands.Remove(alias);
+                return true;
+            } else
+            {
+                return false;
+            }
+        }
+
+        public bool RemoveCommand(ArduinoCommand cmd)
+        {
+            return RemoveCommand(cmd.Alias);
         }
 
 

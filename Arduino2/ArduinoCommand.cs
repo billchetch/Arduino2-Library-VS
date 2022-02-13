@@ -21,6 +21,11 @@ namespace Chetch.Arduino2
             return cmd;
         }
 
+        public static String FormatAlias(String alias)
+        {
+            return alias.ToLower().Trim().Replace('_', '-');
+        }
+
         public enum DeviceCommand
         {
             NONE = 0,
@@ -58,6 +63,10 @@ namespace Chetch.Arduino2
             FLOAT,
         }
 
+
+
+        public long ID { get; internal set; } = 0;
+
         public DeviceCommand Command { get; internal set; }
 
         private String _alias;
@@ -70,7 +79,7 @@ namespace Chetch.Arduino2
                 {
                     throw new ArgumentException("Alias cannot be null or empty");
                 }
-                _alias = value.ToLower().Trim().Replace('_', '-');
+                _alias = FormatAlias(value);
             }
         }
 
@@ -101,13 +110,16 @@ namespace Chetch.Arduino2
         public int TotalCommandCount { get; internal set; } = 0;
         public int TotalDelayCount { get; internal set; } = 0;
 
-        public ArduinoCommand(DeviceCommand command, String alias = null, List<ParameterType> parameterTypes  = null)
+        public ArduinoCommand(long id, DeviceCommand command, String alias = null, List<ParameterType> parameterTypes  = null)
         {
+            ID = id;
             Command = command;
             Alias = alias == null ? command.ToString() : alias;
             if(parameterTypes != null)AddParameterTypes(parameterTypes);
         }
 
+        public ArduinoCommand(DeviceCommand command, String alias = null, List<ParameterType> parameterTypes = null) : this(0, command, alias, parameterTypes) { }
+        
         ArduinoCommand(int delay) : this(DeviceCommand.NONE)
         {
             DelayInterval = delay;

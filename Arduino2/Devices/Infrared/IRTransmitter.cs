@@ -36,7 +36,13 @@ namespace Chetch.Arduino2.Devices.Infrared
             base.ReadDevice();
             if(DB != null)
             {
-                AddCommands(DB.GetCommands(DeviceName), true);
+                //remove commands added from database (ID>0)
+                foreach(var cmd in Commands)
+                {
+                    if (cmd.ID > 0) RemoveCommand(cmd);
+                }
+                //add commands from database
+                AddCommands(DB.GetCommands(DeviceName));
                 _repeatCommand = GetCommand(REPEAT_COMMAND);
             }
         }

@@ -78,17 +78,18 @@ namespace Chetch.Arduino2.Devices.Infrared
         virtual public void ReadDevice()
         {
             if (DB == null) throw new Exception("No database available");
-            if (DeviceName == null) throw new Exception("No device name given");
-
             DBID = 0;
-            Database.DBRow dev = DB.GetDevice(DeviceName);
-
-            //TODO: make it so that you can choose to overwrite data or not
-            if (dev != null)
+            if (DeviceName != null)
             {
-                DBID = dev.ID;
-                DeviceType = (String)dev["device_type"];
-                Manufacturer = (String)dev["manufacturer"];
+                Database.DBRow dev = DB.GetDevice(DeviceName);
+
+                //TODO: make it so that you can choose to overwrite data or not
+                if (dev != null)
+                {
+                    DBID = dev.ID;
+                    DeviceType = (String)dev["device_type"];
+                    Manufacturer = (String)dev["manufacturer"];
+                }
             }
         }
 
