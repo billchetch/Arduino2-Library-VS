@@ -7,6 +7,10 @@ using Chetch.Utilities;
 
 namespace Chetch.Arduino2.Devices.Infrared
 {
+    // <summary>
+    /// Arduino board Works with KY-022 IR receiver
+    /// </summary>
+    /// 
     public abstract class IRReceiver : IRDevice
     {
         private bool _receiving = false;
@@ -68,11 +72,30 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
+        public void StartRecording()
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.START);
+        }
+
+        public void StopRecording()
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.STOP);
+        }
+
+        public void SaveRecording()
+        {
+            ExecuteCommand(ArduinoCommand.DeviceCommand.SAVE);
+        }
+
         protected override void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<object> parameters = null)
         {
             switch (cmd.Command)
             {
                 case ArduinoCommand.DeviceCommand.START:
+                    if(_commandName == null)
+                    {
+                        throw new Exception("Cannot start recording without a command name");
+                    }
                     _irCodes.Clear();
                     _unknownCodes.Clear();
                     _receiving = true;
@@ -83,6 +106,7 @@ namespace Chetch.Arduino2.Devices.Infrared
                     break;
 
                 case ArduinoCommand.DeviceCommand.SAVE:
+                    StopRecording();
                     _receiving = false;
                     WriteIRCodes();
                     return;
@@ -149,11 +173,11 @@ namespace Chetch.Arduino2.Devices.Infrared
             switch (fieldName)
             {
                 case "Code":
-                    return 1;
+                    return 0;
                 case "Protocol":
-                    return 2;
+                    return 1;
                 case "Bits":
-                    return 3;
+                    return 2;
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);

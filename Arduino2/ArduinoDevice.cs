@@ -431,7 +431,7 @@ namespace Chetch.Arduino2
             ArduinoCommand cmd = GetCommand(commandAlias);
             if(cmd == null)
             {
-                throw new Exception(String.Format("Device {0} doesnot have command with alias {1}", ID, commandAlias));
+                throw new Exception(String.Format("Device {0} does not have command with alias {1}", ID, commandAlias));
             }
 
             int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);

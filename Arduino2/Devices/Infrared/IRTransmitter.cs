@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace Chetch.Arduino2.Devices.Infrared
 {
+    /// <summary>
+    /// Note: Arduino board Works with KY-005 transmitter
+    /// </summary>
+    /// 
     public abstract class IRTransmitter : IRDevice
     {
         private bool _active = false;
@@ -24,7 +28,12 @@ namespace Chetch.Arduino2.Devices.Infrared
 
             _activatePin = activatePin;
             _transmitPin = transmitPin;
-            
+
+            if(_activatePin > 0)
+            {
+                AddCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
+                AddCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
+            }
         }
 
         public IRTransmitter(int activatePin = 0, int transmitPin = 0, IRDB db = null) : this("irt" + activatePin, "IRT", activatePin, transmitPin, db) { }
@@ -73,6 +82,11 @@ namespace Chetch.Arduino2.Devices.Infrared
             {
                 return base.ExecuteCommand(commandAlias, parameters);
             }
+        }
+
+        public ADMRequestManager.ADMRequest Send(String alias)
+        {
+            return ExecuteCommand(alias);
         }
 
         public ADMRequestManager.ADMRequest Activate()
