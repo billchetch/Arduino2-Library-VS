@@ -13,13 +13,26 @@ namespace Chetch.Arduino2.Devices.Infrared
     /// 
     public abstract class IRReceiver : IRDevice
     {
-        private bool _receiving = false;
+        private bool _recording = false;
         private String _commandName;
         private int _receivePin;
         private Dictionary<String, IRCode> _irCodes = new Dictionary<String, IRCode>();
         private Dictionary<long, IRCode> _unknownCodes = new Dictionary<long, IRCode>();
         private List<long> _ignoreCodes = new List<long>(); //codes we ignore
 
+        public bool IsRecording => _recording;
+
+        public event EventHandler<IRCode> ReceivedIRCode;
+
+        public IRCode LastIRCodeReceived
+        {
+            get { return Get<IRCode>(); }
+            internal set 
+            {
+                ReceivedIRCode?.Invoke(this, value);
+                Set(value, true, IsReady); 
+            }
+        }
 
         public String IRCommandName
         {
@@ -49,6 +62,9 @@ namespace Chetch.Arduino2.Devices.Infrared
 
             cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.SAVE);
             AddCommand(cmd);
+
+            cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.RESUME);
+            AddCommand(cmd);
         }
 
         public IRReceiver(int receivePin, IRDB db = null) : this("irr" + receivePin, "IRR", receivePin, db) { }
@@ -72,19 +88,24 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
-        public void StartRecording()
+        public ADMRequestManager.ADMRequest StartRecording()
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.START);
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.START);
         }
 
-        public void StopRecording()
+        public ADMRequestManager.ADMRequest StopRecording()
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.STOP);
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.STOP);
         }
 
-        public void SaveRecording()
+        public ADMRequestManager.ADMRequest SaveRecording()
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.SAVE);
+            return ExecuteCommand (ArduinoCommand.DeviceCommand.SAVE);
+        }
+
+        public ADMRequestManager.ADMRequest Resume()
+        {
+            return ExecuteCommand(ArduinoCommand.DeviceCommand.RESUME);
         }
 
         protected override void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<object> parameters = null)
@@ -98,28 +119,28 @@ namespace Chetch.Arduino2.Devices.Infrared
                     }
                     _irCodes.Clear();
                     _unknownCodes.Clear();
-                    _receiving = true;
+                    _recording = true;
                     break;
 
                 case ArduinoCommand.DeviceCommand.STOP:
-                    _receiving = false;
+                    _recording = false;
                     break;
 
                 case ArduinoCommand.DeviceCommand.SAVE:
                     StopRecording();
-                    _receiving = false;
+                    _recording = false;
                     WriteIRCodes();
                     return;
             }
             base.ExecuteCommand(cmd, request, parameters);
         }
 
-        virtual public void processCode(long code, int protocol, int bits = 32)
+        private void processCode(long code, int protocol, int bits = 32)
         {
             processCode(_commandName, code, protocol, bits);
         }
 
-        virtual public void processCode(String commandName, long code, int protocol, int bits)
+        private void processCode(String commandName, long code, int protocol, int bits)
         {
             if (commandName == null || commandName.Length == 0 || _ignoreCodes.Contains(code) || protocol == (int)IRProtocol.UNKNOWN) return;
 
@@ -186,17 +207,20 @@ namespace Chetch.Arduino2.Devices.Infrared
 
         public override void HandleMessage(ADMMessage message)
         {
+            IRCode irc;
             switch (message.Type)
             {
                 case Messaging.MessageType.DATA:
-                    if(_receiving)
-                    {
-                        long ircode = GetMessageValue<long>("Code", message); 
-                        int protocol = GetMessageValue<int>("Protocol", message);
-                        int bits = GetMessageValue<int>("Bits", message);
+                    irc = new IRCode();
+                    irc.Code = GetMessageValue<long>("Code", message);
+                    irc.Protocol = GetMessageValue<int>("Protocol", message);
+                    irc.Bits = GetMessageValue<int>("Bits", message);
 
-                        processCode(ircode, protocol, bits);
+                    if (_recording)
+                    {
+                        processCode(irc.Code, irc.Protocol, irc. Bits);
                     }
+                    LastIRCodeReceived = irc;
                     break;
             }
 

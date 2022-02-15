@@ -52,6 +52,7 @@ namespace Chetch.Arduino2
             SAVE,
             ACTIVATE,
             DEACTIVATE,
+            RESUME,
         }
 
         public enum ParameterType
