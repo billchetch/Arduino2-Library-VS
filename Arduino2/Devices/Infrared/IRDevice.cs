@@ -9,8 +9,10 @@ namespace Chetch.Arduino2.Devices.Infrared
     public struct IRCode
     {
         public long Code;
-        public int Protocol;
-        public int Bits;
+        public Int16 Protocol;
+        public Int16 Bits;
+        public Int16 RawLength;
+        public Int16[] Raw;
 
         public override string ToString()
         {

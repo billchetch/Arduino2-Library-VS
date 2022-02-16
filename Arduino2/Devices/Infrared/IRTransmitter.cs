@@ -84,9 +84,9 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
-        public ADMRequestManager.ADMRequest Send(String alias)
+        public ADMRequestManager.ADMRequest Transmit(String commandAlias)
         {
-            return ExecuteCommand(alias);
+            return ExecuteCommand(commandAlias);
         }
 
         public ADMRequestManager.ADMRequest Activate()

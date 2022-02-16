@@ -135,12 +135,12 @@ namespace Chetch.Arduino2.Devices.Infrared
             base.ExecuteCommand(cmd, request, parameters);
         }
 
-        private void processCode(long code, int protocol, int bits = 32)
+        private void processCode(long code, Int16 protocol, Int16 bits = 32)
         {
             processCode(_commandName, code, protocol, bits);
         }
 
-        private void processCode(String commandName, long code, int protocol, int bits)
+        private void processCode(String commandName, long code, Int16 protocol, Int16 bits)
         {
             if (commandName == null || commandName.Length == 0 || _ignoreCodes.Contains(code) || protocol == (int)IRProtocol.UNKNOWN) return;
 
@@ -199,6 +199,10 @@ namespace Chetch.Arduino2.Devices.Infrared
                     return 1;
                 case "Bits":
                     return 2;
+                case "RawLength":
+                    return 3;
+                case "Raw":
+                    return 4;
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);
@@ -213,8 +217,26 @@ namespace Chetch.Arduino2.Devices.Infrared
                 case Messaging.MessageType.DATA:
                     irc = new IRCode();
                     irc.Code = GetMessageValue<long>("Code", message);
-                    irc.Protocol = GetMessageValue<int>("Protocol", message);
-                    irc.Bits = GetMessageValue<int>("Bits", message);
+                    irc.Protocol = GetMessageValue<Int16>("Protocol", message);
+                    irc.Bits = GetMessageValue<Int16>("Bits", message);
+                    irc.RawLength = GetMessageValue<Int16>("RawLength", message);
+                    if(irc.RawLength > 0)
+                    {
+
+                        int argIdx = GetArgumentIndex("Raw", message);
+                        if(message.Arguments[argIdx].Length != 2 * irc.RawLength)
+                        {
+                            throw new Exception(String.Format("Cannot process raw as raw length is {0} but message argument length is {1}", irc.RawLength, message.Arguments[argIdx].Length));
+                        }
+                        irc.Raw = new short[irc.RawLength];
+                        byte[] bytes = new byte[2];
+                        for(int i = 0; i < irc.RawLength; i++)
+                        {
+                            bytes[0] = message.Arguments[argIdx][2*i];
+                            bytes[1] = message.Arguments[argIdx][2*i + 1];
+                            irc.Raw[i] = Chetch.Utilities.Convert.ToInt16(bytes);
+                        }
+                    }
 
                     if (_recording)
                     {
