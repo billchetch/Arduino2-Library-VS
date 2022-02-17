@@ -26,6 +26,11 @@ namespace Chetch.Arduino2
             return alias.ToLower().Trim().Replace('_', '-');
         }
 
+        public static String FormatAlias(DeviceCommand deviceCommand)
+        {
+            return FormatAlias(deviceCommand.ToString());
+        }
+
         public enum DeviceCommand
         {
             NONE = 0,
@@ -62,6 +67,8 @@ namespace Chetch.Arduino2
             INT,
             BYTE,
             FLOAT,
+            BYTE_ARRAY,
+            INT_ARRAY,
         }
 
 
@@ -175,6 +182,43 @@ namespace Chetch.Arduino2
             }
         }
 
+        public void ValidateParameter(Object paramValue, ParameterType paramType)
+        {
+            switch (paramType)
+            {
+                case ParameterType.STRING:
+                    if(!(paramValue is String))
+                    {
+                        throw new Exception(String.Format("Parameter {0} is not a string", paramValue));
+                    }
+                    break;
+
+                case ParameterType.BOOL:
+                    Chetch.Utilities.Convert.ToBoolean(paramValue);
+                    break;
+                
+                case ParameterType.INT:
+                    break;
+
+                case ParameterType.BYTE:
+                    if (!(paramValue is byte))
+                    {
+                        throw new Exception(String.Format("Parameter {0} is not a boolean", paramValue));
+                    }
+                    break;
+
+                case ParameterType.FLOAT:
+                    if (!(paramValue is float || paramValue is double))
+                    {
+                        throw new Exception(String.Format("Parameter {0} is not a float", paramValue));
+                    }
+                    break;
+
+                default:
+                    throw new Exception(String.Format("Cannot validate parameter type {0}", paramType));
+            }
+        }
+
         public void ValidateParameters(List<Object> parameters)
         {
             if(parameters.Count > ParameterTypes.Count)
@@ -186,58 +230,42 @@ namespace Chetch.Arduino2
             {
                 Object paramValue = parameters[i];
                 ParameterType paramType = ParameterTypes[i];
-                bool valid = false;
-                switch (paramType)
+                try
                 {
-                    case ParameterType.STRING:
-                        valid = (paramValue is String);
-                        break;
+                    switch (paramType)
+                    {
+                        case ParameterType.BYTE_ARRAY:         
+                        case ParameterType.INT_ARRAY:
+                            if (paramValue.GetType().IsArray)
+                            {
+                                ParameterType elementType = 0;
+                                switch (paramType)
+                                {
+                                    case ParameterType.BYTE_ARRAY:
+                                        elementType = ParameterType.BYTE; break;
+                                    case ParameterType.INT_ARRAY:
+                                        elementType = ParameterType.INT; break;
+                                }
 
-                    case ParameterType.BOOL:
-                        parameters[i] = Chetch.Utilities.Convert.ToBoolean(paramValue);
-                        valid = true;
-                        break;
+                                var ar = (System.Collections.IEnumerable)parameters[i];
+                                foreach (var item in ar)
+                                {
+                                    ValidateParameter(item, elementType);
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception(String.Format("Not an array"));
+                            }
+                            break;
 
-                    case ParameterType.INT:
-                        if(paramValue is int)
-                        {
-                            valid = true;
-                        }
-                        else
-                        {
-                            parameters[i] = int.Parse(paramValue.ToString());
-                            valid = true;
-                        }
-                        break;
-
-                    case ParameterType.BYTE:
-                        if (paramValue is byte)
-                        {
-                            valid = true;
-                        }
-                        else
-                        {
-                            parameters[i] = byte.Parse(paramValue.ToString());
-                            valid = true;
-                        }
-                        break;
-
-                    case ParameterType.FLOAT:
-                        if (paramValue is float || paramValue is double)
-                        {
-                            valid = true;
-                        }
-                        else
-                        {
-                            parameters[i] = float.Parse(paramValue.ToString());
-                            valid = true;
-                        }
-                        break;
-
-                }
-                if (!valid)
+                        default:
+                            ValidateParameter(paramValue, paramType);
+                            break;
+                    }
+                } catch (Exception e)
                 {
-                    throw new Exception(String.Format("Paramter at position {0} is not of type", i, paramType));
+                    throw new Exception(String.Format("Parameter in position {0}: ", i, e.Message));
                 }
             }
         }

@@ -476,7 +476,7 @@ namespace Chetch.Arduino2
 
         public ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand.DeviceCommand deviceCommand, params Object[] parameters)
         {
-            return ExecuteCommand(deviceCommand.ToString().ToLower(), parameters.ToList());
+            return ExecuteCommand(ArduinoCommand.FormatAlias(deviceCommand), parameters.ToList());
         }
 
         //The preferred single public method calls this protected method

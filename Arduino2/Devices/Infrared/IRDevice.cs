@@ -11,8 +11,8 @@ namespace Chetch.Arduino2.Devices.Infrared
         public long Code;
         public Int16 Protocol;
         public Int16 Bits;
-        public Int16 RawLength;
-        public Int16[] Raw;
+        public UInt16 RawLength;
+        public UInt16[] Raw;
 
         public override string ToString()
         {

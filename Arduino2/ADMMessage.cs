@@ -66,6 +66,18 @@ namespace Chetch.Arduino2
             AddArgument(Chetch.Utilities.Convert.ToBytes(s));
         }
 
+        public void AddArgument(Int16 arg)
+        {
+            byte[] bytes = Chetch.Utilities.Convert.ToBytes(arg, LittleEndian, true, -1);
+            AddArgument(bytes);
+        }
+
+        public void AddArgument(UInt16 arg)
+        {
+            byte[] bytes = Chetch.Utilities.Convert.ToBytes(arg, LittleEndian, true, -1);
+            AddArgument(bytes);
+        }
+
         public void AddArgument(int arg)
         {
             byte[] bytes = Chetch.Utilities.Convert.ToBytes((Int16)arg, LittleEndian, true, -1);
@@ -75,6 +87,12 @@ namespace Chetch.Arduino2
         public void AddArgument(long arg)
         {
             byte[] bytes = Chetch.Utilities.Convert.ToBytes((Int32)arg, LittleEndian, true, -1);
+            AddArgument(bytes);
+        }
+
+        public void AddArgument(ulong arg)
+        {
+            byte[] bytes = Chetch.Utilities.Convert.ToBytes((UInt32)arg, LittleEndian, true, -1);
             AddArgument(bytes);
         }
 

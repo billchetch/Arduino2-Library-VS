@@ -16,11 +16,14 @@ namespace Chetch.Arduino2.Devices.Infrared
         private int _activatePin; //HIGH output means the transmitter is disabled (as there is no voltage across it)
         private int _transmitPin;
 
+        public bool IsActive => _active;
+
         //if last command is same as current command and time diff (millis) between last command and current command
         //is less than RepeatInterval then use _repeatCommand if it exists.
         private ArduinoCommand _repeatCommand = null;
         public int RepeatInterval { get; set; } = 200;
         public bool UseRepeatCommand = true;
+
         
         public IRTransmitter(String id, String name, int activatePin = 0, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
@@ -29,7 +32,16 @@ namespace Chetch.Arduino2.Devices.Infrared
             _activatePin = activatePin;
             _transmitPin = transmitPin;
 
-            if(_activatePin > 0)
+            //command for sending raw data
+            var cmd = AddCommand(ArduinoCommand.DeviceCommand.SEND, "send-raw");
+            cmd.AddParameter(ArduinoCommand.ParameterType.INT, 0); //ircommand
+            cmd.AddParameter(ArduinoCommand.ParameterType.INT, 0); //bits
+            cmd.AddParameter(ArduinoCommand.ParameterType.INT, -1); //protocol
+            cmd.AddParameterType(ArduinoCommand.ParameterType.INT); //Raw Length
+            cmd.AddParameterType(ArduinoCommand.ParameterType.INT_ARRAY); //Raw
+
+            //activate stuff
+            if (_activatePin > 0)
             {
                 AddCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
                 AddCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
@@ -84,9 +96,40 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
+        protected override bool HandleCommand(ArduinoCommand cmd, List<object> parameters)
+        {
+            switch (cmd.Command)
+            {
+                case ArduinoCommand.DeviceCommand.ACTIVATE:
+                    _active = true;
+                    break;
+
+                case ArduinoCommand.DeviceCommand.DEACTIVATE:
+                    _active = false;
+                    break;
+            }
+            return base.HandleCommand(cmd, parameters);
+        }
+
         public ADMRequestManager.ADMRequest Transmit(String commandAlias)
         {
             return ExecuteCommand(commandAlias);
+        }
+
+        public ADMRequestManager.ADMRequest TransmitRaw(UInt16[] raw)
+        {
+            return ExecuteCommand("send-raw", raw.Length, raw);
+        }
+
+        public ADMRequestManager.ADMRequest TransmitRaw(String rawString)
+        {
+            var items = rawString.Split(',');
+            UInt16[] raw = new ushort[items.Length];
+            for(int i = 0; i < items.Length; i++)
+            {
+                raw[i] = System.Convert.ToUInt16(items[i].Trim());
+            }
+            return TransmitRaw(raw);
         }
 
         public ADMRequestManager.ADMRequest Activate()

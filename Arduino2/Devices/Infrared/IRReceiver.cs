@@ -219,23 +219,15 @@ namespace Chetch.Arduino2.Devices.Infrared
                     irc.Code = GetMessageValue<long>("Code", message);
                     irc.Protocol = GetMessageValue<Int16>("Protocol", message);
                     irc.Bits = GetMessageValue<Int16>("Bits", message);
-                    irc.RawLength = GetMessageValue<Int16>("RawLength", message);
+                    irc.RawLength = GetMessageValue<UInt16>("RawLength", message);
                     if(irc.RawLength > 0)
                     {
-
                         int argIdx = GetArgumentIndex("Raw", message);
                         if(message.Arguments[argIdx].Length != 2 * irc.RawLength)
                         {
                             throw new Exception(String.Format("Cannot process raw as raw length is {0} but message argument length is {1}", irc.RawLength, message.Arguments[argIdx].Length));
                         }
-                        irc.Raw = new short[irc.RawLength];
-                        byte[] bytes = new byte[2];
-                        for(int i = 0; i < irc.RawLength; i++)
-                        {
-                            bytes[0] = message.Arguments[argIdx][2*i];
-                            bytes[1] = message.Arguments[argIdx][2*i + 1];
-                            irc.Raw[i] = Chetch.Utilities.Convert.ToInt16(bytes);
-                        }
+                        irc.Raw = GetMessageValue<UInt16[]>("Raw", message);
                     }
 
                     if (_recording)
