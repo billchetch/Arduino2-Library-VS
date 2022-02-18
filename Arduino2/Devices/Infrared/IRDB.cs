@@ -69,7 +69,7 @@ namespace Chetch.Arduino2.Devices.Infrared
 
         override public List<DBRow> SelectCommands(String deviceName)
         {
-            return Select("ir_device_commands", "id, command, command_alias, bits, protocol", deviceName);
+            return Select("ir_device_commands", "id, command, command_alias, bits, protocol, raw", deviceName);
         }
 
         protected override ArduinoCommand CreateCommand(string deviceName, DBRow row)
@@ -86,7 +86,22 @@ namespace Chetch.Arduino2.Devices.Infrared
                     break;
             }
             command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToUInt16(row["bits"]));
-            command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToUInt16(row["protocol"]));
+            command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt16(row["protocol"]));
+            UInt16[] raw = null;
+            if (row["raw"] != null && row["raw"].ToString() != String.Empty)
+            {
+                var ar = row["raw"].ToString().Split(',');
+                if (ar.Length > 0)
+                {
+                    raw = new UInt16[ar.Length];
+                    for (var i = 0; i < ar.Length; i++)
+                    {
+                        raw[i] = Convert.ToUInt16(ar[i].Trim());
+                    }
+                }
+            }
+            command.AddParameter(ArduinoCommand.ParameterType.INT, raw == null ? 0 : Convert.ToUInt16(raw.Length));
+            command.AddParameter(ArduinoCommand.ParameterType.INT_ARRAY, raw);
             return command;
         }
 

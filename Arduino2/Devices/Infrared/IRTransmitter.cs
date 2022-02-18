@@ -23,6 +23,8 @@ namespace Chetch.Arduino2.Devices.Infrared
         private ArduinoCommand _repeatCommand = null;
         public int RepeatInterval { get; set; } = 200;
         public bool UseRepeatCommand = true;
+        private ArduinoCommand _lastSendCommand;
+        private DateTime _lastSendCommandOn;
 
         
         public IRTransmitter(String id, String name, int activatePin = 0, int transmitPin = 0, IRDB db = null) : base(id, name, db)
@@ -76,23 +78,35 @@ namespace Chetch.Arduino2.Devices.Infrared
             message.AddArgument(_transmitPin);
         }
 
-        public override ADMRequestManager.ADMRequest ExecuteCommand(string commandAlias, List<object> parameters = null)
+        public override ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<object> parameters = null)
         {
-            if (commandAlias.Length == 2 && uint.TryParse(commandAlias, out _))
+            if (cmd.Alias.Length == 2 && uint.TryParse(cmd.Alias, out _))
             {
                 //split a 2 digit number in to it's components ... this is so we can have commands like 62
                 //without needing to build a new command from '6' and from '2'
-                int d1 = (int)char.GetNumericValue(commandAlias[0]);
-                int d2 = (int)char.GetNumericValue(commandAlias[1]);
+                int d1 = (int)char.GetNumericValue(cmd.Alias[0]);
+                int d2 = (int)char.GetNumericValue(cmd.Alias[1]);
 
                 base.ExecuteCommand(d1.ToString(), parameters);
                 System.Threading.Thread.Sleep(RepeatInterval * 2);
                 base.ExecuteCommand(d2.ToString(), parameters);
                 return null;
             }
-            else
+            else if(_repeatCommand != null && UseRepeatCommand && cmd.Command == ArduinoCommand.DeviceCommand.SEND && !cmd.Equals(_repeatCommand))
             {
-                return base.ExecuteCommand(commandAlias, parameters);
+                var timeDiff = (DateTime.Now.Ticks - _lastSendCommandOn.Ticks) / TimeSpan.TicksPerMillisecond;
+                ArduinoCommand cmd2send = cmd;
+                if (_lastSendCommand != null && _lastSendCommand.Equals(cmd) && timeDiff < RepeatInterval)
+                {
+                    cmd2send = _repeatCommand;
+                    Console.WriteLine("Using repeat command for {0}", cmd.Alias);
+                }
+                _lastSendCommand = cmd;
+                _lastSendCommandOn = DateTime.Now;
+                return base.ExecuteCommand(cmd2send, parameters);
+            } else
+            {
+                return base.ExecuteCommand(cmd, parameters);
             }
         }
 
@@ -109,6 +123,12 @@ namespace Chetch.Arduino2.Devices.Infrared
                     break;
             }
             return base.HandleCommand(cmd, parameters);
+        }
+
+        protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        {
+            Console.WriteLine("{0} {1}", message.GetArgument<Int16>(2), message.GetArgument<Int16>(3));
+            return base.HandleCommandResponse(deviceCommand, message);
         }
 
         public ADMRequestManager.ADMRequest Transmit(String commandAlias)
@@ -132,6 +152,15 @@ namespace Chetch.Arduino2.Devices.Infrared
             return TransmitRaw(raw);
         }
 
+        public ADMRequestManager.ADMRequest TransmitRepeat()
+        {
+            if(_repeatCommand == null)
+            {
+                throw new Exception("Cannot transmit repeat as there is no repeat command");
+            }
+            return ExecuteCommand(_repeatCommand);
+        }
+
         public ADMRequestManager.ADMRequest Activate()
         {
             return ExecuteCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
@@ -142,24 +171,6 @@ namespace Chetch.Arduino2.Devices.Infrared
             return ExecuteCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
         }
 
-        /*override protected void SendCommand(ArduinoCommand command, ExecutionArguments xargs)
-        {
-            if(command.Type == ArduinoCommand.CommandType.SEND && Protocol != IRProtocol.UNKNOWN && command.Arguments.Count == 3)
-            {
-                command.Arguments[2] = (int)Protocol;
-            }
-
-            var timeDiff = (DateTime.Now.Ticks - LastCommandSentOn) / TimeSpan.TicksPerMillisecond;
-            if (UseRepeatCommand && _repeatCommand != null && LastCommandSent != null && LastCommandSent.Equals(command) && timeDiff < RepeatInterval)
-            {
-                base.SendCommand(_repeatCommand, xargs);
-                LastCommandSent = command;
-            }
-            else
-            {
-                base.SendCommand(command, xargs);
-            }
-        }*/
         protected override int GetArgumentIndex(string fieldName, ADMMessage message)
         {
             switch(fieldName)

@@ -187,7 +187,7 @@ namespace Chetch.Arduino2
             switch (paramType)
             {
                 case ParameterType.STRING:
-                    if(!(paramValue is String))
+                    if(paramValue != null && !(paramValue is String))
                     {
                         throw new Exception(String.Format("Parameter {0} is not a string", paramValue));
                     }
@@ -236,6 +236,8 @@ namespace Chetch.Arduino2
                     {
                         case ParameterType.BYTE_ARRAY:         
                         case ParameterType.INT_ARRAY:
+                            if (paramValue == null) continue;
+
                             if (paramValue.GetType().IsArray)
                             {
                                 ParameterType elementType = 0;

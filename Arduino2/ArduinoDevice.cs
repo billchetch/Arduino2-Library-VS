@@ -422,18 +422,13 @@ namespace Chetch.Arduino2
         /// All public commands should go throw this public command
         /// </summary>
         private Task _executeCommandTask = null;
-        virtual public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)
+        virtual public ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<Object> parameters = null)
         {
             if (!IsReady)
             {
-                throw new InvalidOperationException(String.Format("Device {0} Cannot execute command {1} as device is not ready", ID, commandAlias));
+                throw new InvalidOperationException(String.Format("Device {0} Cannot execute command {1} as device is not ready", ID, cmd.Alias));
             }
-            ArduinoCommand cmd = GetCommand(commandAlias);
-            if(cmd == null)
-            {
-                throw new Exception(String.Format("Device {0} does not have command with alias {1}", ID, commandAlias));
-            }
-
+            
             int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl);
             Action action = () =>
@@ -469,6 +464,17 @@ namespace Chetch.Arduino2
             return req;
         }
 
+        public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)
+        {
+            ArduinoCommand cmd = GetCommand(commandAlias);
+            if (cmd == null)
+            {
+                throw new Exception(String.Format("Device {0} does not have command with alias {1}", ID, commandAlias));
+            }
+            return ExecuteCommand(cmd, parameters);
+        }
+
+
         public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, params Object[] parameters)
         {
             return ExecuteCommand(commandAlias, parameters.ToList());
@@ -479,7 +485,7 @@ namespace Chetch.Arduino2
             return ExecuteCommand(ArduinoCommand.FormatAlias(deviceCommand), parameters.ToList());
         }
 
-        //The preferred single public method calls this protected method
+        //The preferred single public method calls this protected method in an action (i.e. asynchronous)
         virtual protected void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<Object> parameters = null)
         {
             for (int i = 0; i < cmd.Repeat; i++)
@@ -534,7 +540,10 @@ namespace Chetch.Arduino2
                                 cm.AddArgument((byte)cmd.Command);
                                 foreach (var p in allParams)
                                 {
-                                    cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                                    if (p != null)
+                                    {
+                                        cm.AddArgument(Chetch.Utilities.Convert.ToBytes(p));
+                                    }
                                 }
                                 //Console.WriteLine("Sending command {0} to {1}", cmd.Alias, UID);
                                 SendMessage(cm);

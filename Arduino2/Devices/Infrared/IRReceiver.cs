@@ -14,7 +14,6 @@ namespace Chetch.Arduino2.Devices.Infrared
     public abstract class IRReceiver : IRDevice
     {
         private bool _recording = false;
-        private String _commandName;
         private int _receivePin;
         private Dictionary<String, IRCode> _irCodes = new Dictionary<String, IRCode>();
         private Dictionary<long, IRCode> _unknownCodes = new Dictionary<long, IRCode>();
@@ -34,10 +33,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
-        public String IRCommandName
-        {
-            get { return _commandName;  }
-        }
+        public String IRCommandName { get; set; }
 
         public Dictionary<String, IRCode> IRCodes
         {
@@ -108,12 +104,12 @@ namespace Chetch.Arduino2.Devices.Infrared
             return ExecuteCommand(ArduinoCommand.DeviceCommand.RESUME);
         }
 
-        protected override void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<object> parameters = null)
+        protected override bool HandleCommand(ArduinoCommand cmd, List<object> parameters = null)
         {
             switch (cmd.Command)
             {
                 case ArduinoCommand.DeviceCommand.START:
-                    if(_commandName == null)
+                    if(IRCommandName == null)
                     {
                         throw new Exception("Cannot start recording without a command name");
                     }
@@ -130,14 +126,14 @@ namespace Chetch.Arduino2.Devices.Infrared
                     StopRecording();
                     _recording = false;
                     WriteIRCodes();
-                    return;
+                    return false;
             }
-            base.ExecuteCommand(cmd, request, parameters);
+            return base.HandleCommand(cmd, parameters);
         }
 
         private void processCode(long code, Int16 protocol, Int16 bits = 32)
         {
-            processCode(_commandName, code, protocol, bits);
+            processCode(IRCommandName, code, protocol, bits);
         }
 
         private void processCode(String commandName, long code, Int16 protocol, Int16 bits)
