@@ -57,11 +57,11 @@ namespace Chetch.Arduino2.Devices.Infrared
             //INSERTS
             this.AddInsertStatement("ir_devices", "device_name='{0}',device_type='{1}',manufacturer='{2}'");
             this.AddInsertStatement("ir_commands", "command_alias='{0}'");
-            this.AddInsertStatement("ir_device_commands", "device_id={0},command_id={1},command='{2}',protocol={3},bits={4}");
+            this.AddInsertStatement("ir_device_commands", "device_id={0},command_id={1},protocol={2},address='{3}',command='{4}'");
 
             //UPDATES
             this.AddUpdateStatement("ir_devices", "device_name='{0}',device_type='{1}',manufacturer='{2}'", "id={3}");
-            this.AddUpdateStatement("ir_device_commands", "device_id={0},command_id={1},command='{2}',protocol={3},bits={4}", "id={5}");
+            this.AddUpdateStatement("ir_device_commands", "device_id={0},command_id={1},protocol={2},address='{3}',command='{4}'", "id={5}");
 
             //Init base
             base.Initialize();
@@ -69,39 +69,26 @@ namespace Chetch.Arduino2.Devices.Infrared
 
         override public List<DBRow> SelectCommands(String deviceName)
         {
-            return Select("ir_device_commands", "id, command, command_alias, bits, protocol, raw", deviceName);
+            return Select("ir_device_commands", "id, command_alias, protocol, address, command", deviceName);
         }
 
         protected override ArduinoCommand CreateCommand(string deviceName, DBRow row)
         {
             var command = new ArduinoCommand(row.ID, ArduinoCommand.DeviceCommand.SEND, (String)row["command_alias"]);
+            command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt16(row["protocol"]));
+
             switch (Encoding)
             {
                 case IREncoding.HEX:
+                    command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt64((String)row["address"], 16));
                     command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt64((String)row["command"], 16));
                     break;
 
                 case IREncoding.LONG:
+                    command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt64((String)row["address"]));
                     command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt64((String)row["command"]));
                     break;
             }
-            command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToUInt16(row["bits"]));
-            command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt16(row["protocol"]));
-            UInt16[] raw = null;
-            if (row["raw"] != null && row["raw"].ToString() != String.Empty)
-            {
-                var ar = row["raw"].ToString().Split(',');
-                if (ar.Length > 0)
-                {
-                    raw = new UInt16[ar.Length];
-                    for (var i = 0; i < ar.Length; i++)
-                    {
-                        raw[i] = Convert.ToUInt16(ar[i].Trim());
-                    }
-                }
-            }
-            command.AddParameter(ArduinoCommand.ParameterType.INT, raw == null ? 0 : Convert.ToUInt16(raw.Length));
-            command.AddParameter(ArduinoCommand.ParameterType.INT_ARRAY, raw);
             return command;
         }
 
@@ -153,35 +140,41 @@ namespace Chetch.Arduino2.Devices.Infrared
             return Insert("ir_commands", alias);
         }
 
-        public long InsertCommand(long deviceId, long aliasId, long irCode, int protocol, int bits)
+        public long InsertCommand(long deviceId, long aliasId, int protocol, int address, int command)
         {
-            String code = "";
+            String addr = "";
+            String cmd = "";
             switch (Encoding)
             {
                 case IREncoding.HEX:
-                    code = irCode.ToString("X");
+                    addr = address.ToString("X");
+                    cmd = command.ToString("X");
                     break;
                 case IREncoding.LONG:
-                    code = irCode.ToString();
+                    addr = address.ToString();
+                    cmd = command.ToString();
                     break;
             }
-            return Insert("ir_device_commands", deviceId.ToString(), aliasId.ToString(), code, protocol.ToString(), bits.ToString());
+            return Insert("ir_device_commands", deviceId.ToString(), aliasId.ToString(), protocol.ToString(), addr, cmd);
         }
 
-        public void UpdateCommand(long devCommandId, long deviceId, long aliasId, long irCode, int protocol, int bits)
+        public void UpdateCommand(long devCommandId, long deviceId, long aliasId, int protocol, int address, int command)
         {
-            String code = "";
+            String addr = "";
+            String cmd = "";
             switch (Encoding)
             {
                 case IREncoding.HEX:
-                    code = irCode.ToString("X");
+                    addr = address.ToString("X");
+                    cmd = command.ToString("X");
                     break;
                 case IREncoding.LONG:
-                    code = irCode.ToString();
+                    addr = address.ToString();
+                    cmd = command.ToString();
                     break;
             }
 
-            Update("ir_device_commands", deviceId.ToString(), aliasId.ToString(), code, protocol.ToString(), bits.ToString(), devCommandId.ToString());
+            Update("ir_device_commands", deviceId.ToString(), aliasId.ToString(), protocol.ToString(), addr, cmd, devCommandId.ToString());
         }
     }
 }

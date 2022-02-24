@@ -8,44 +8,48 @@ namespace Chetch.Arduino2.Devices.Infrared
 {
     public struct IRCode
     {
-        public long Code;
-        public Int16 Protocol;
-        public Int16 Bits;
-        public UInt16 RawLength;
-        public UInt16[] Raw;
-
+        public IRProtocol Protocol;
+        public UInt16 Address;
+        public UInt16 Command;
+        
         public override string ToString()
         {
-            return Code.ToString() + " (" + Code.ToString("X") + ") " + Protocol.ToString() + " " + Bits.ToString();
+            return Address.ToString("X") + "," + Command.ToString("X") + " - Protocol: " + Protocol.ToString();
         }
     }
 
     public enum IRProtocol{
-        UNKNOWN = -1,
-        UNUSED = 0,
+        UNKNOWN = 0,
+        PULSE_DISTANCE,
+        PULSE_WIDTH,
+        DENON,
+        DISH,
+        JVC,
+        LG,
+        LG2,
+        NEC,
+        PANASONIC,
+        KASEIKYO,
+        KASEIKYO_JVC,
+        KASEIKYO_DENON,
+        KASEIKYO_SHARP,
+        KASEIKYO_MITSUBISHI,
         RC5,
         RC6,
-        NEC,
-        SONY,
-        PANASONIC,
-        JVC,
         SAMSUNG,
-        WHYNTER,
-        AIWA_RC_T501,
-        LG,
-        SANYO,
-        MITSUBISHI,
-        DISH,
         SHARP,
-        DENON,
-        PRONTO,
-        LEGO_PF
+        SONY,
+        ONKYO,
+        APPLE,
+        BOSEWAVE,
+        LEGO_PF,
+        MAGIQUEST,
+        WHYNTER,
     }
 
     public class IRDevice : ArduinoDevice
     {
-        public const String REPEAT_COMMAND = "_REPEAT";
-
+        
         protected IRDB DB { get; set;  }
         protected long DBID { get; set;  }  = 0;
         public bool IsInDB

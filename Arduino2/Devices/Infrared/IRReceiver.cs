@@ -59,8 +59,6 @@ namespace Chetch.Arduino2.Devices.Infrared
             cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.SAVE);
             AddCommand(cmd);
 
-            cmd = new ArduinoCommand(ArduinoCommand.DeviceCommand.RESUME);
-            AddCommand(cmd);
         }
 
         public IRReceiver(int receivePin, IRDB db = null) : this("irr" + receivePin, "IRR", receivePin, db) { }
@@ -76,12 +74,6 @@ namespace Chetch.Arduino2.Devices.Infrared
         {
             base.ReadDevice();
 
-            ArduinoCommand cmd = DB.GetCommand(DeviceName, REPEAT_COMMAND);
-            if (cmd != null)
-            {
-                long code = System.Convert.ToInt64(cmd.Parameters[0]);
-                if(!_ignoreCodes.Contains(code))_ignoreCodes.Add(code);
-            }
         }
 
         public ADMRequestManager.ADMRequest StartRecording()
@@ -131,34 +123,23 @@ namespace Chetch.Arduino2.Devices.Infrared
             return base.HandleCommand(cmd, parameters);
         }
 
-        private void processCode(long code, Int16 protocol, Int16 bits = 32)
+        private void processCode(IRProtocol protocol, UInt16 address, UInt16 command)
         {
-            processCode(IRCommandName, code, protocol, bits);
+            processCode(IRCommandName, protocol, address, command);
         }
 
-        private void processCode(String commandName, long code, Int16 protocol, Int16 bits)
+        private void processCode(String commandName, IRProtocol protocol, UInt16 address, UInt16 command)
         {
-            if (commandName == null || commandName.Length == 0 || _ignoreCodes.Contains(code) || protocol == (int)IRProtocol.UNKNOWN) return;
+            if (commandName == null || commandName.Length == 0 || protocol == IRProtocol.UNKNOWN) return;
 
             IRCode irc = new IRCode();
-            if (_irCodes.ContainsKey(commandName))
+            if (!_irCodes.ContainsKey(commandName))
             {
-                //if there is already an ir code for this command then check if the actual code is different
-                //from the original then store as an 'unkonwn' code for later inspection
-                if(_irCodes[commandName].Code != code)
-                {
-                    irc.Code = code;
-                    irc.Protocol = protocol;
-                    irc.Bits = bits;
-                    _unknownCodes[code] = irc;
-                }
-            } else
-            {
-                irc.Code = code;
                 irc.Protocol = protocol;
-                irc.Bits = bits;
+                irc.Address = address;
+                irc.Command = command;
                 _irCodes[commandName] = irc;
-            }   
+            }
         }
 
         virtual public void processUnknownCode(String commandName, IRCode irc)
@@ -189,17 +170,12 @@ namespace Chetch.Arduino2.Devices.Infrared
         {
             switch (fieldName)
             {
-                case "Code":
-                    return 0;
                 case "Protocol":
+                    return 0;
+                case "Address":
                     return 1;
-                case "Bits":
+                case "Command":
                     return 2;
-                case "RawLength":
-                    return 3;
-                case "Raw":
-                    return 4;
-
                 default:
                     return base.GetArgumentIndex(fieldName, message);
             }
@@ -212,23 +188,14 @@ namespace Chetch.Arduino2.Devices.Infrared
             {
                 case Messaging.MessageType.DATA:
                     irc = new IRCode();
-                    irc.Code = GetMessageValue<long>("Code", message);
-                    irc.Protocol = GetMessageValue<Int16>("Protocol", message);
-                    irc.Bits = GetMessageValue<Int16>("Bits", message);
-                    irc.RawLength = GetMessageValue<UInt16>("RawLength", message);
-                    if(irc.RawLength > 0)
-                    {
-                        int argIdx = GetArgumentIndex("Raw", message);
-                        if(message.Arguments[argIdx].Length != 2 * irc.RawLength)
-                        {
-                            throw new Exception(String.Format("Cannot process raw as raw length is {0} but message argument length is {1}", irc.RawLength, message.Arguments[argIdx].Length));
-                        }
-                        irc.Raw = GetMessageValue<UInt16[]>("Raw", message);
-                    }
+                    irc.Protocol = (IRProtocol)GetMessageValue<Int16>("Protocol", message);
+                    irc.Address = GetMessageValue<UInt16>("Address", message);
+                    irc.Command = GetMessageValue<UInt16>("Command", message);
+                    
 
                     if (_recording)
                     {
-                        processCode(irc.Code, irc.Protocol, irc. Bits);
+                        processCode(irc.Protocol, irc.Address, irc.Command);
                     }
                     LastIRCodeReceived = irc;
                     break;
@@ -259,7 +226,7 @@ namespace Chetch.Arduino2.Devices.Infrared
                 }
 
                 try { 
-                    DB.InsertCommand(DBID, caid, irc.Code, irc.Protocol, irc.Bits);
+                    DB.InsertCommand(DBID, caid, (int)irc.Protocol, irc.Address, irc.Command);
                 } catch (Exception e)
                 {
                     //can happen if ir code is a duplicate
@@ -268,7 +235,7 @@ namespace Chetch.Arduino2.Devices.Infrared
                     if (row == null) throw e;
                     long cmdid = row.ID;
                     if (cmdid == 0) throw new Exception("No ir command code found in database");
-                    DB.UpdateCommand(cmdid, DBID, caid, irc.Code, irc.Protocol, irc.Bits);
+                    DB.UpdateCommand(cmdid, DBID, caid, (int)irc.Protocol, irc.Address, irc.Command);
                 }
             }
         }

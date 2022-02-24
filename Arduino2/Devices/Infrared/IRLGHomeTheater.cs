@@ -10,7 +10,7 @@ namespace Chetch.Arduino2.Devices.Infrared
     {
         public const String DEVICE_NAME = "LG Home Theater";
 
-        public IRLGHomeTheater(String id, int enablePin, int transmitPin, IRDB db) : base(id, "LGHT", enablePin, transmitPin, db)
+        public IRLGHomeTheater(String id, int transmitPin, IRDB db) : base(id, "LGHT", transmitPin, db)
         {
             DeviceName = DEVICE_NAME;
 

@@ -12,11 +12,7 @@ namespace Chetch.Arduino2.Devices.Infrared
     /// 
     public abstract class IRTransmitter : IRDevice
     {
-        private bool _active = false;
-        private int _activatePin; //HIGH output means the transmitter is disabled (as there is no voltage across it)
         private int _transmitPin;
-
-        public bool IsActive => _active;
 
         //if last command is same as current command and time diff (millis) between last command and current command
         //is less than RepeatInterval then use _repeatCommand if it exists.
@@ -27,32 +23,16 @@ namespace Chetch.Arduino2.Devices.Infrared
         private DateTime _lastSendCommandOn;
 
         
-        public IRTransmitter(String id, String name, int activatePin = 0, int transmitPin = 0, IRDB db = null) : base(id, name, db)
+        public IRTransmitter(String id, String name, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
             Category = DeviceCategory.IR_TRANSMITTER;
 
-            _activatePin = activatePin;
             _transmitPin = transmitPin;
-
-            //command for sending raw data
-            var cmd = AddCommand(ArduinoCommand.DeviceCommand.SEND, "send-raw");
-            cmd.AddParameter(ArduinoCommand.ParameterType.INT, 0); //ircommand
-            cmd.AddParameter(ArduinoCommand.ParameterType.INT, 0); //bits
-            cmd.AddParameter(ArduinoCommand.ParameterType.INT, -1); //protocol
-            cmd.AddParameterType(ArduinoCommand.ParameterType.INT); //Raw Length
-            cmd.AddParameterType(ArduinoCommand.ParameterType.INT_ARRAY); //Raw
-
-            //activate stuff
-            if (_activatePin > 0)
-            {
-                AddCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
-                AddCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
-            }
         }
 
-        public IRTransmitter(int activatePin = 0, int transmitPin = 0, IRDB db = null) : this("irt" + activatePin, "IRT", activatePin, transmitPin, db) { }
+        public IRTransmitter(int transmitPin, IRDB db = null) : this("irt" + transmitPin, "IRT", transmitPin, db) { }
 
-        public IRTransmitter(IRDB db) : this(0, 0, db) { }
+        public IRTransmitter(IRDB db) : this(0, db) { }
 
         public override void ReadDevice()
         {
@@ -66,7 +46,6 @@ namespace Chetch.Arduino2.Devices.Infrared
                 }
                 //add commands from database
                 AddCommands(DB.GetCommands(DeviceName));
-                _repeatCommand = GetCommand(REPEAT_COMMAND);
             }
         }
 
@@ -74,7 +53,6 @@ namespace Chetch.Arduino2.Devices.Infrared
         {
             base.AddConfig(message);
 
-            message.AddArgument(_activatePin);
             message.AddArgument(_transmitPin);
         }
 
@@ -110,21 +88,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
         }
 
-        protected override bool HandleCommand(ArduinoCommand cmd, List<object> parameters)
-        {
-            switch (cmd.Command)
-            {
-                case ArduinoCommand.DeviceCommand.ACTIVATE:
-                    _active = true;
-                    break;
-
-                case ArduinoCommand.DeviceCommand.DEACTIVATE:
-                    _active = false;
-                    break;
-            }
-            return base.HandleCommand(cmd, parameters);
-        }
-
+       
         protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             Console.WriteLine("{0} {1}", message.GetArgument<Int16>(2), message.GetArgument<Int16>(3));
@@ -136,21 +100,6 @@ namespace Chetch.Arduino2.Devices.Infrared
             return ExecuteCommand(commandAlias);
         }
 
-        public ADMRequestManager.ADMRequest TransmitRaw(UInt16[] raw)
-        {
-            return ExecuteCommand("send-raw", raw.Length, raw);
-        }
-
-        public ADMRequestManager.ADMRequest TransmitRaw(String rawString)
-        {
-            var items = rawString.Split(',');
-            UInt16[] raw = new ushort[items.Length];
-            for(int i = 0; i < items.Length; i++)
-            {
-                raw[i] = System.Convert.ToUInt16(items[i].Trim());
-            }
-            return TransmitRaw(raw);
-        }
 
         public ADMRequestManager.ADMRequest TransmitRepeat()
         {

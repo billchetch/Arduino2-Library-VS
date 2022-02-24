@@ -8,10 +8,10 @@ namespace Chetch.Arduino2.Devices.Infrared
 {
     public class IRGenericTransmitter : IRTransmitter
     {
-        public IRGenericTransmitter(String id, String name, int activatePin, int transmitPin = 0, IRDB db = null) : base(id, name, activatePin, transmitPin, db)
+        public IRGenericTransmitter(String id, String name, int transmitPin, IRDB db = null) : base(id, name, transmitPin, db)
         {}
 
-        public IRGenericTransmitter(int activatePin = 0, int transmitPin = 0, IRDB db = null) : base(activatePin, transmitPin, db) 
+        public IRGenericTransmitter(int transmitPin = 0, IRDB db = null) : base(transmitPin, db) 
         {}
 
         public IRGenericTransmitter(IRDB db) : base(db) 

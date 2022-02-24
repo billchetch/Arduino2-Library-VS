@@ -173,11 +173,14 @@ namespace Chetch.Arduino2
                 case "ErrorCode":
                     return 0;
 
-                case "ErrorSubCode":
+                case "DeviceErrorCode":
                     return 1;
 
-                case "ErrorFromMessage": //should give the message type that resulted in the error
+                case "DeviceErrorSubCode":
                     return 2;
+
+                case "ErrorFromMessage": //should give the message type that resulted in the error
+                    return 3;
 
                 default:
                     throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));
@@ -273,8 +276,9 @@ namespace Chetch.Arduino2
                     try
                     {
                         ArduinoDeviceManager.ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
-                        ErrorCode errorSubCode = (ErrorCode)GetMessageValue<int>("ErrorSubCode", message);
-                        error = String.Format("{0}-{1}", errorCode, errorSubCode);
+                        ErrorCode deviceErrorCode = (ErrorCode)GetMessageValue<int>("DeviceErrorCode", message);
+                        int subCode = GetMessageValue<int>("DeviceErrorSubCode", message);
+                        error = String.Format("{0}-{1}-{2}", errorCode, deviceErrorCode, subCode);
                         if (message.Arguments.Count - 1 >= GetArgumentIndex("ErrorFromMessage", message))
                         {
                             info = "Originating message of type " + GetMessageValue<MessageType>("ErrorFromMessage", message);
