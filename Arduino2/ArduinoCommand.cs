@@ -182,6 +182,16 @@ namespace Chetch.Arduino2
             }
         }
 
+        public void SetParameter(int idx, Object paramValue)
+        {
+            if (idx >= ParameterTypes.Count)
+            {
+                throw new Exception(String.Format("Cannot set parameter at position {0} because no parameter type has been specified", idx));
+            }
+            ValidateParameter(paramValue, ParameterTypes[idx]);
+            Parameters[idx] = paramValue;
+        }
+
         public void ValidateParameter(Object paramValue, ParameterType paramType)
         {
             switch (paramType)

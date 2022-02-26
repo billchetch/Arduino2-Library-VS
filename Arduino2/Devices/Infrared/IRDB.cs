@@ -89,6 +89,9 @@ namespace Chetch.Arduino2.Devices.Infrared
                     command.AddParameter(ArduinoCommand.ParameterType.INT, Convert.ToInt64((String)row["command"]));
                     break;
             }
+
+            //Add a parameter to hold repeats value
+            command.AddParameterType(ArduinoCommand.ParameterType.INT);
             return command;
         }
 

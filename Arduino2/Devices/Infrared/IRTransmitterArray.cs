@@ -15,14 +15,10 @@ namespace Chetch.Arduino2.Devices.Infrared
         private List<IRTransmitter> _transmitters = new List<IRTransmitter>();
 
         public IRTransmitterArray(String id, String name = DEFAULT_NAME) : base(id, name)
-        {
-
-        }
+        {}
 
         public void AddTransmitters(params IRTransmitter[] transmitters)
-        {
-
-        }
+        {}
 
         public void AddTransmitter(IRTransmitter transmitter)
         {
