@@ -48,6 +48,19 @@ namespace Chetch.Arduino2
             }
         }
 
+        public void AddDevices(params ArduinoDevice[] devices)
+        {
+            AddDevices(devices.ToList());
+        }
+
+        public void AddDevices(List<ArduinoDevice> devices)
+        {
+            foreach(var dev in devices)
+            {
+                AddDevice(dev);
+            }
+        }
+
         public ArduinoDevice GetDevice(String deviceID)
         {
             foreach (var dev in Devices)

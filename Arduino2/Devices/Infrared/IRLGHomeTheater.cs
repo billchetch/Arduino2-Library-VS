@@ -16,6 +16,9 @@ namespace Chetch.Arduino2.Devices.Infrared
 
             AddCompoundCommand("Unmute", "Volume_up", "Volume_down");
             AddCompoundCommand("Mute", "Unmute", "Mute/Unmute");
+
+            RepeatThresholdLower = 50;
+            RepeatThresholdUpper = 120;
         }
     }
 }

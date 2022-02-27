@@ -85,7 +85,6 @@
     <Compile Include="Devices\Infrared\IRReceiver.cs" />
     <Compile Include="Devices\Infrared\IRSamsungTV.cs" />
     <Compile Include="Devices\Infrared\IRTransmitter.cs" />
-    <Compile Include="Devices\Infrared\IRTransmitterArray.cs" />
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Devices\Temperature\DS18B20Array.cs" />

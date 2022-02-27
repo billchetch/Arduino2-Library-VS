@@ -17,7 +17,8 @@ namespace Chetch.Arduino2.Devices.Infrared
         //if last command is same as current command and time diff (millis) between last command and current command
         //is less than RepeatInterval then use _repeatCommand if it exists.
         private ArduinoCommand _repeatCommand = null;
-        public int RepeatThreshold { get; set; } = 120; //set to 0 to disable use of repeat
+        public int RepeatThresholdLower { get; set; } = 120;
+        public int RepeatThresholdUpper { get; set; } = 120; //set to 0 to disable use of repeat
         
         
         public IRTransmitter(String id, String name, int transmitPin = 0, IRDB db = null) : base(id, name, db)
@@ -51,7 +52,8 @@ namespace Chetch.Arduino2.Devices.Infrared
             base.AddConfig(message);
 
             message.AddArgument(_transmitPin);
-            message.AddArgument(RepeatThreshold);
+            message.AddArgument(RepeatThresholdLower);
+            message.AddArgument(RepeatThresholdUpper);
         }
 
         public override ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<object> parameters = null)
@@ -64,7 +66,7 @@ namespace Chetch.Arduino2.Devices.Infrared
                 int d2 = (int)char.GetNumericValue(cmd.Alias[1]);
 
                 base.ExecuteCommand(d1.ToString(), parameters);
-                System.Threading.Thread.Sleep(RepeatThreshold * 2);
+                System.Threading.Thread.Sleep(RepeatThresholdUpper * 2);
                 base.ExecuteCommand(d2.ToString(), parameters);
                 return null;
             }
@@ -87,11 +89,11 @@ namespace Chetch.Arduino2.Devices.Infrared
             return base.HandleCommand(cmd, parameters);
         }
 
-        protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        /*protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
-            Console.WriteLine("{0} {1} {2} {3} {4}", message.GetArgument<UInt16>(1), message.GetArgument<UInt16>(2), message.GetArgument<UInt16>(3), message.GetArgument<bool>(4), message.GetArgument<UInt16>(5));
+            Console.WriteLine("{0} {1} {2}", message.GetArgument<UInt16>(1), message.GetArgument<UInt16>(2), message.GetArgument<UInt16>(3));
             return base.HandleCommandResponse(deviceCommand, message);
-        }
+        }*/
 
         public ADMRequestManager.ADMRequest Transmit(String commandAlias, int repeat = 0)
         {
