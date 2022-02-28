@@ -484,10 +484,6 @@ namespace Chetch.Arduino2
 
                 //use tag to get current request and release it for future use
                 ProcessingRequest = Requests.Release(message.Tag);
-                if(message.Tag > 0)
-                {
-                    Console.WriteLine("Tag {0}, RTag: {1}, Owner {2}", message.Tag, ProcessingRequest.Tag, ProcessingRequest.Owner);
-                }
                 
                 //now direct to the target
                 if (message.Target == ADM_TARGET_ID)

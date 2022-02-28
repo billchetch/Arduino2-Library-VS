@@ -17,8 +17,10 @@ namespace Chetch.Arduino2.Devices.Infrared
         //if last command is same as current command and time diff (millis) between last command and current command
         //is less than RepeatInterval then use _repeatCommand if it exists.
         private ArduinoCommand _repeatCommand = null;
-        public int RepeatThresholdLower { get; set; } = 120;
+        public int RepeatThresholdLower { get; set; } = 50;
         public int RepeatThresholdUpper { get; set; } = 120; //set to 0 to disable use of repeat
+
+        public int RepeatInterval => RepeatThresholdUpper - RepeatThresholdLower / 2;
         
         
         public IRTransmitter(String id, String name, int transmitPin = 0, IRDB db = null) : base(id, name, db)
@@ -56,7 +58,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             message.AddArgument(RepeatThresholdUpper);
         }
 
-        public override ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<object> parameters = null)
+        /*public override ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<object> parameters = null)
         {
             if (cmd.Alias.Length == 2 && uint.TryParse(cmd.Alias, out _))
             {
@@ -74,7 +76,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             {
                 return base.ExecuteCommand(cmd, parameters);
             }
-        }
+        }*/
 
 
         protected override bool HandleCommand(ArduinoCommand cmd, List<object> parameters)
@@ -109,16 +111,6 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
             _repeatCommand.SetParameter(0, protocol);
             return ExecuteCommand(_repeatCommand);
-        }
-
-        public ADMRequestManager.ADMRequest Activate()
-        {
-            return ExecuteCommand(ArduinoCommand.DeviceCommand.ACTIVATE);
-        }
-
-        public ADMRequestManager.ADMRequest Deactivate()
-        {
-            return ExecuteCommand(ArduinoCommand.DeviceCommand.DEACTIVATE);
         }
 
         protected override int GetArgumentIndex(string fieldName, ADMMessage message)

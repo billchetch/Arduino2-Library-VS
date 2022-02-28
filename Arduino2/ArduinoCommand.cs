@@ -23,7 +23,7 @@ namespace Chetch.Arduino2
 
         public static String FormatAlias(String alias)
         {
-            return alias.ToLower().Trim().Replace('_', '-');
+            return alias.ToLower().Trim().Replace('_', '-').Replace(' ', '-');
         }
 
         public static String FormatAlias(DeviceCommand deviceCommand)

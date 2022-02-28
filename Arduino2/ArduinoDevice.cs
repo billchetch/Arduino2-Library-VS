@@ -145,7 +145,7 @@ namespace Chetch.Arduino2
             return String.Format("{0} {1}", UID, Name);
         }
 
-        protected ADMMessage CreateMessage(MessageType messageType)
+        public ADMMessage CreateMessage(MessageType messageType)
         {
             var message = new ADMMessage();
             message.Type = messageType;
@@ -392,7 +392,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        protected ArduinoCommand GetCommand(String alias)
+        public ArduinoCommand GetCommand(String alias)
         {
             alias = ArduinoCommand.FormatAlias(alias);
             return _commands.ContainsKey(alias) ? _commands[alias] : null;
@@ -403,7 +403,7 @@ namespace Chetch.Arduino2
             return GetCommand(command.ToString());
         }
 
-        public bool RemoveCommand(String alias)
+        protected bool RemoveCommand(String alias)
         {
             alias = ArduinoCommand.FormatAlias(alias);
             if (_commands.ContainsKey(alias))
@@ -416,7 +416,7 @@ namespace Chetch.Arduino2
             }
         }
 
-        public bool RemoveCommand(ArduinoCommand cmd)
+        protected bool RemoveCommand(ArduinoCommand cmd)
         {
             return RemoveCommand(cmd.Alias);
         }
@@ -435,6 +435,10 @@ namespace Chetch.Arduino2
             
             int ttl = System.Math.Max(ADMRequestManager.DEFAULT_TTL, cmd.TotalDelayInterval + 1000);
             ADMRequestManager.ADMRequest req = ADM.Requests.AddRequest(ttl);
+            if(req == null)
+            {
+                Console.WriteLine("Hmmm why is this...");
+            }
             Action action = () =>
             {
                 try

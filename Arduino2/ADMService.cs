@@ -617,7 +617,10 @@ namespace Chetch.Arduino2
 
                                     default:
                                         var req = device.ExecuteCommand(cmd, args);
-                                        req.Owner = Client.Name;
+                                        if (req != null)
+                                        {
+                                            req.Owner = Client.Name;
+                                        }
                                         break;
                                 }
                             }
