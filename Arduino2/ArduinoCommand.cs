@@ -58,7 +58,6 @@ namespace Chetch.Arduino2
             ACTIVATE,
             DEACTIVATE,
             RESUME,
-            REPEAT,
         }
 
         public enum ParameterType
@@ -190,7 +189,18 @@ namespace Chetch.Arduino2
                 throw new Exception(String.Format("Cannot set parameter at position {0} because no parameter type has been specified", idx));
             }
             ValidateParameter(paramValue, ParameterTypes[idx]);
-            Parameters[idx] = paramValue;
+            if (idx == Parameters.Count)
+            {
+                Parameters.Add(paramValue);
+            }
+            else if (idx < Parameters.Count)
+            {
+                Parameters[idx] = paramValue;
+            }
+            else
+            {
+                throw new Exception(String.Format("{0} is not a valid parameter index", idx));
+            }
         }
 
         public void ValidateParameter(Object paramValue, ParameterType paramType)

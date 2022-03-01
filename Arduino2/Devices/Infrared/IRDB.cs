@@ -91,7 +91,7 @@ namespace Chetch.Arduino2.Devices.Infrared
             }
 
             //Add a parameter to hold repeats value
-            command.AddParameterType(ArduinoCommand.ParameterType.INT);
+            command.AddParameter(ArduinoCommand.ParameterType.BOOL, false);
             return command;
         }
 
