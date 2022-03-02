@@ -22,6 +22,7 @@ namespace Chetch.Arduino2.Devices.Infrared
         private ArduinoCommand _repeatCommand = null;
         public int RepeatThreshold { get; set; } = 200; //set to 0 to disable use of repeat
         private System.Timers.Timer _repeatTimer = new System.Timers.Timer();
+        public bool IsRepeating => _repeatTimer.Enabled;
 
         public IRTransmitter(String id, String name, int transmitPin = 0, IRDB db = null) : base(id, name, db)
         {
@@ -37,15 +38,13 @@ namespace Chetch.Arduino2.Devices.Infrared
 
             _repeatTimer.Interval = 10;
             _repeatTimer.AutoReset = true;
+            _repeatTimer.Enabled = false;
             _repeatTimer.Elapsed += (sender, eargs) =>
             {
-                bool continueRepeat = ((DateTime.Now.Ticks - _lastSendCommandOn.Ticks) / TimeSpan.TicksPerMillisecond) < RepeatThreshold;
-                if (!continueRepeat)
+                bool endRepeat = ((DateTime.Now.Ticks - _lastSendCommandOn.Ticks) / TimeSpan.TicksPerMillisecond) >= RepeatThreshold;
+                if (endRepeat)
                 {
-                    _repeatCommand.SetParameter(3, false);
-                    _repeatTimer.Enabled = false;
-                    ExecuteCommand(_repeatCommand);
-                    Console.WriteLine("Stop using repeat");
+                    EndRepeat();
                 }
             };
         }
@@ -105,7 +104,6 @@ namespace Chetch.Arduino2.Devices.Infrared
                             _repeatCommand.SetParameter(2, cmd.Parameters[2]);
                             _repeatCommand.SetParameter(3, true);
 
-                            Console.WriteLine("Starting repeat timer..");
                             _repeatTimer.Enabled = true;
                             cmd2execute = _repeatCommand;
                         } else
@@ -122,13 +120,13 @@ namespace Chetch.Arduino2.Devices.Infrared
                     }
                     else
                     {
-                        Console.WriteLine("Sending {0}", cmd2execute.Alias);
+                        //Console.WriteLine("Sending {0}", cmd2execute.Alias);
                         return base.ExecuteCommand(cmd2execute, parameters);
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Send {0}", cmd.Alias);
+                    //Console.WriteLine("Send {0}", cmd.Alias);
                     return base.ExecuteCommand(cmd, parameters);
                 }
             } 
@@ -136,15 +134,34 @@ namespace Chetch.Arduino2.Devices.Infrared
 
 
         
-        protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        /*protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
         {
             Console.WriteLine("{0} {1} {2} {3} {4}", message.GetArgument<UInt16>(1), message.GetArgument<UInt16>(2), message.GetArgument<UInt16>(3), message.GetArgument<bool>(4), message.GetArgument<bool>(5));
             return base.HandleCommandResponse(deviceCommand, message);
-        }
+        }*/
 
-        public ADMRequestManager.ADMRequest Transmit(String commandAlias)
+        public ADMRequestManager.ADMRequest EndRepeat()
         {
-            return ExecuteCommand(commandAlias);
+            if (IsRepeating)
+            {
+                _repeatCommand.SetParameter(3, false);
+                _repeatTimer.Enabled = false;
+                return ExecuteCommand(_repeatCommand);
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public ADMRequestManager.ADMRequest TransmitWithRepeat(String commandAlias)
+        {
+            var cmd = GetCommand(commandAlias);
+            _repeatCommand.SetParameter(0, cmd.Parameters[0]);
+            _repeatCommand.SetParameter(1, cmd.Parameters[1]);
+            _repeatCommand.SetParameter(2, cmd.Parameters[2]);
+            _repeatCommand.SetParameter(3, true);
+
+            return ExecuteCommand(_repeatCommand);
         }
 
         protected override int GetArgumentIndex(string fieldName, ADMMessage message)
