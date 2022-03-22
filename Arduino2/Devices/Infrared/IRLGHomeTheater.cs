@@ -16,6 +16,8 @@ namespace Chetch.Arduino2.Devices.Infrared
 
             AddCompoundCommand("Unmute", "Volume_up", "Volume_down");
             AddCompoundCommand("Mute", "Unmute", "Mute/Unmute");
+            AddCompoundCommand("Bluetooth", 500, "AuxOpt", "Function");
+            AddCompoundCommand("Aux", 500, "AuxOpt", "Function", "Function");
         }
     }
 }
