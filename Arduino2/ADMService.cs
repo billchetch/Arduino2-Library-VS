@@ -382,7 +382,7 @@ namespace Chetch.Arduino2
                 _beginADMsTimer = new System.Timers.Timer();
                 _beginADMsTimer.Elapsed += OnBeginADMsTimer;
                 _beginADMsTimer.Interval = BEGIN_ADMS_TIMER_INTERVAL;
-                Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so starting up {1} ADMs ...", cnn.Name, _adms.Count);
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so starting up timer to create and begin ADMs", cnn.Name);
                 OnBeginADMsTimer(null, null);
 
             }
