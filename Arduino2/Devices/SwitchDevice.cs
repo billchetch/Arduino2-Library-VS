@@ -173,6 +173,9 @@ namespace Chetch.Arduino2.Devices
                     ExecuteCommand(ArduinoCommand.DeviceCommand.OFF);
                     break;
             }
+
+            //we set this tentatively now ... after the command is executed the PinState will be set and this will confirm the position.
+            Position = newPosition;
             
         }
 

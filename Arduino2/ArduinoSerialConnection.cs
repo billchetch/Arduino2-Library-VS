@@ -10,6 +10,7 @@ namespace Chetch.Arduino2
     public class ArduinoSerialConnection : SerialPortX
     {
         public const String BOARD_CH340 = "CH340";
+        public const String BOARD_ARDUINO = "Arduino";
         public const String BOARD_UNO = "Arduino Uno";
         public const String BOARD_MEGA = "Arduino Mega";
         public const String BOARD_MEGA_CH340 = "CH340";

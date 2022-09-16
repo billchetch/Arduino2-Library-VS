@@ -85,6 +85,11 @@ namespace Chetch.Arduino2
             try
             {
                 var ports = SerialPorts.Find(boardName);
+                if(ports.Count == 0)
+                {
+                    throw new Exception(String.Format("Cannot find a Serial Port for board {0}", boardName));
+                }
+
                 var serial = new ArduinoSerialConnection(ports[0], baudRate);
                 var sfc = new StreamFlowController(serial, localUartSize, remoteUartSize);
                 var adm = new ArduinoDeviceManager(sfc, connectTimeout);
