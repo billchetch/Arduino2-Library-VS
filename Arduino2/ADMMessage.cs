@@ -8,6 +8,9 @@ using Chetch.Utilities;
 
 namespace Chetch.Arduino2
 {
+    /// <summary>
+    /// Messages sent to board
+    /// </summary>
     public class ADMMessage
     {
         static public ADMMessage Deserialize(byte[] bytes)
