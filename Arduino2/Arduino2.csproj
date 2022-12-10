@@ -88,6 +88,7 @@
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Devices\Temperature\DS18B20Array.cs" />
+    <Compile Include="Devices\Weight\LoadCell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
