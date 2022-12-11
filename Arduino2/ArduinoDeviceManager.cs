@@ -243,6 +243,9 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public bool BoardConfigured { get; internal set; } = false;
 
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public long BoardLoopDuration { get; internal set; } = 0;
+
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -621,7 +624,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case MessageType.STATUS_RESPONSE:
-                    AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured");
+                    AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured", "BoardLoopDuration");
                     //Console.WriteLine(">>> Memory: {0}", BoardMemory);
                     if (IsDeviceReady)
                     {
@@ -720,14 +723,14 @@ namespace Chetch.Arduino2
                     return 3;
                 case "DeviceCount":
                     return 4;
+                case "BoardLoopDuration":
+                    return 5;
                 case "ErrorCode":
                     return 0;
                 case "AttachMode":
                     return 2;
                 case "AREF":
                     return 3;
-
-
 
                 default:
                     throw new ArgumentException(String.Format("unrecognised message field {0}", fieldName));

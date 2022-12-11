@@ -15,19 +15,21 @@ namespace Chetch.Arduino2.Devices.Weight
 
         private int _sckPin;
 
-        public int ReadInterval { get; set; } = 500; //in millis
+        public int ReadInterval { get; set; } = 500; //in millis (less than 100 and the device does not normally have time reset)
 
         public int SampleSize { get; set; } = 1; //how man samples to take before averaging the read value
 
 
         public double Scale { get; set; } = 1.0;
 
-        public int Offset { get; set; } = 0;
+        public long Offset { get; set; } = 0;
+
+        public long RawValue { get; internal set; } = 0;
 
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
-        public int Weight
+        public double Weight
         {
-            get { return Get<int>(); }
+            get { return Get<double>(); }
             internal set { Set(value, IsReady, IsReady); } //Note: this will fire a property change even if no value change
         }
 
@@ -54,8 +56,14 @@ namespace Chetch.Arduino2.Devices.Weight
         {
             switch (fieldName)
             {
-                case "Weight":
+                case "Reading":
                     return 0;
+
+                case "MaxDiff":
+                    return 1;
+
+                case "ReadCount":
+                    return 2;
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);
@@ -67,7 +75,10 @@ namespace Chetch.Arduino2.Devices.Weight
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    AssignMessageValues(message, "Weight");
+                    RawValue = GetMessageValue<long>("Reading", message);
+                    //this triggers listeners
+                    double w = (RawValue - Offset) / Scale;
+                    Weight = Math.Max(w, 0);
                     break;
 
                 case MessageType.WARNING:
