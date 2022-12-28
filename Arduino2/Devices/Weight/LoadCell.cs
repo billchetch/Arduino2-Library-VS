@@ -11,9 +11,10 @@ namespace Chetch.Arduino2.Devices.Weight
     {
         public const String DEFAULT_NAME = "LOADCELL";
 
-        private int _doutPin;
+        private byte _doutPin;
 
-        private int _sckPin;
+        private byte _sckPin;
+
 
         public int ReadInterval { get; set; } = 500; //in millis (less than 100 and the device does not normally have time reset)
 
@@ -26,14 +27,18 @@ namespace Chetch.Arduino2.Devices.Weight
 
         public long RawValue { get; internal set; } = 0;
 
+        public int MinWeight { get; set; } = 0;
+
+        public int MaxWeight { get; set; } = 1000;
+
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
-        public double Weight
+        virtual public double Weight
         {
             get { return Get<double>(); }
-            internal set { Set(value, IsReady, IsReady); } //Note: this will fire a property change even if no value change
+            protected set { Set(value, IsReady, IsReady); } //Note: this will fire a property change even if no value change
         }
 
-        public LoadCell(String id, int doutPin, int sckPin, String name = DEFAULT_NAME) : base(id, name)
+        public LoadCell(String id, byte doutPin, byte sckPin, String name = DEFAULT_NAME) : base(id, name)
         {
             _doutPin = doutPin;
             _sckPin = sckPin;
@@ -52,22 +57,25 @@ namespace Chetch.Arduino2.Devices.Weight
         }
 
 
+
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
         {
             switch (fieldName)
             {
-                case "Reading":
+                case "RawValue":
+                    return message.Type == MessageType.DATA ? 0 : 1;
+
+                case "MessageID":
                     return 0;
-
-                case "MaxDiff":
-                    return 1;
-
-                case "ReadCount":
-                    return 2;
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);
             }
+        }
+
+        virtual protected void OnSetWeight()
+        {
+            //a hook
         }
 
         override public void HandleMessage(ADMMessage message)
@@ -75,20 +83,30 @@ namespace Chetch.Arduino2.Devices.Weight
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    RawValue = GetMessageValue<long>("Reading", message);
-                    //this triggers listeners
+                    RawValue = GetMessageValue<long>("RawValue", message);
+
                     double w = (RawValue - Offset) / Scale;
-                    Weight = Math.Max(w, 0);
-                    break;
-
-                case MessageType.WARNING:
-                    break;
-
-                case MessageType.CONFIGURE_RESPONSE:
+                    Weight = Math.Min(Math.Max(w, MinWeight), MaxWeight);
+                    OnSetWeight();
                     break;
             }
 
             base.HandleMessage(message);
         }
+
+        virtual public void Tare()
+        {
+            Offset = RawValue;
+        }
+
+        /*protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)
+        {
+            switch (deviceCommand)
+            {
+                case ArduinoCommand.DeviceCommand.ZERO:
+                    break;
+            }
+            return base.HandleCommandResponse(deviceCommand, message);
+        }*/
     }
 }

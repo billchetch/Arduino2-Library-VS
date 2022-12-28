@@ -73,6 +73,7 @@
     <Compile Include="ArduinoObject.cs" />
     <Compile Include="ArduinoSerialConnection.cs" />
     <Compile Include="ArduinoTCPConnection.cs" />
+    <Compile Include="Devices\Button.cs" />
     <Compile Include="Devices\Buzzers\Buzzer.cs" />
     <Compile Include="Devices\Counter.cs" />
     <Compile Include="Devices\Displays\LCD.cs" />
@@ -88,6 +89,8 @@
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Devices\Temperature\DS18B20Array.cs" />
+    <Compile Include="Devices\Weight\FluidLevel.cs" />
+    <Compile Include="Devices\Weight\FluidLevelDG.cs" />
     <Compile Include="Devices\Weight\LoadCell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
