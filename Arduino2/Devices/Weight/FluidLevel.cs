@@ -13,7 +13,7 @@ namespace Chetch.Arduino2.Devices.Weight
 
         private double _fluiddDensity;
         private double _weightOfUnitHeight;
-        private double _pipeLength;
+        private double _maxHeight;
         private double _pipeWeight;
         private List<double> _levelMarkers = new List<double>();
 
@@ -37,13 +37,13 @@ namespace Chetch.Arduino2.Devices.Weight
 
 
 
-        public FluidLevel(String id, byte doutPin, byte sckPin, double pipeDiameter, double pipeLength, double pipeWeight, double fluidDensity = WATER_DENSITY) : base(id, doutPin, sckPin)
+        public FluidLevel(String id, byte doutPin, byte sckPin, double pipeDiameter, double pipeWeight, double maxHeight, double fluidDensity = WATER_DENSITY) : base(id, doutPin, sckPin)
         {
             _fluiddDensity = fluidDensity;
             double pipeRadius = pipeDiameter / 2.0;
             _weightOfUnitHeight = pipeRadius * pipeRadius * System.Math.PI * _fluiddDensity;
-            _pipeLength = pipeLength;
             _pipeWeight = pipeWeight;
+            _maxHeight = maxHeight;
 
             MinWeight = 0;
             MaxWeight = (int)_pipeWeight;
@@ -55,10 +55,10 @@ namespace Chetch.Arduino2.Devices.Weight
             _levelMarkers.Add(0);
             foreach (var m in markers)
             {
-                if (m <= 0 || m >= _pipeLength) throw new ArgumentOutOfRangeException(String.Format("{0} is out of range", m));
+                if (m <= 0 || m >= _maxHeight) throw new ArgumentOutOfRangeException(String.Format("{0} is out of range", m));
                 _levelMarkers.Add(m);
             }
-            _levelMarkers.Add(_pipeLength);
+            _levelMarkers.Add(_maxHeight);
             _levelMarkers.Sort();
         }
 
@@ -67,10 +67,10 @@ namespace Chetch.Arduino2.Devices.Weight
             base.OnSetWeight();
 
             double weightDelta = _pipeWeight - Weight;
-            Height = System.Math.Min(_pipeLength, weightDelta / _weightOfUnitHeight);
-            if (Height <= 0 || Height >= _pipeLength || _levelMarkers.Count == 0)
+            Height = System.Math.Min(_maxHeight, weightDelta / _weightOfUnitHeight);
+            if (Height <= 0 || Height >= _maxHeight || _levelMarkers.Count == 0)
             {
-                Level = Height / _pipeLength;
+                Level = Height / _maxHeight;
             }
             else
             {
