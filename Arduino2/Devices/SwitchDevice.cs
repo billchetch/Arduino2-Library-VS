@@ -34,8 +34,10 @@ namespace Chetch.Arduino2.Devices
             get { return Get<SwitchPosition>(); }
             internal set 
             {
-                if (IsReady && value != Position) Switched?.Invoke(this, value);
-                Set(value, IsReady); 
+                var oldValue = Position;
+                Set(value, IsReady);
+                if (IsReady && value != Position) Switched?.Invoke(this, oldValue);
+
             }
         }
 
