@@ -301,6 +301,7 @@ namespace Chetch.Arduino2
                 Connecting = true;
                 if (timeout <= 0) timeout = _connectTimeout;
                 DateTime started = DateTime.Now;
+                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Connecting... will timeout after {1} ms", ID, timeout);
                 do
                 {
                     
@@ -310,6 +311,7 @@ namespace Chetch.Arduino2
                         var cnn = (ArduinoTCPConnection)_sfc.Stream;
                         if (cnn.RemoteEndPoint != null)
                         {
+                            Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} creating new ArduinoTCPConnection as existing one has no remote end point", ID);
                             _sfc.Stream = new ArduinoTCPConnection(cnn);
                         }
                     }
@@ -341,6 +343,8 @@ namespace Chetch.Arduino2
 
                 //by here the stream is open and reset and ready for use
                 Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Stream is ready!", ID);
+
+                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} connected", ID);
             }
             catch (Exception e)
             {
@@ -919,16 +923,26 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Stop();
             if (!IsConnected)
             {
-                Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Reconnecting ...", ID);
+                Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Is not connected so attempting to reconnect ...", ID);
                 try
                 {
-                    Disconnect();
+                    Disconnect(); //to ensure cleanly disconnected before trying to connect again
                     Connect(_connectTimeout);
-                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Connected = {1}, IsReady = {2}", ID, IsConnected, IsReady);
-                    if (!IsReady || !Synchronise())
+                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Connected!", ID);
+                    bool initialise = !IsReady;
+                    if (IsReady)
+                    {
+                        //board and devices already configured from previous effort so attempt to synchronise
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is in Ready state so attempting to Synchronise...!", ID);
+                        initialise = !Synchronise();
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, initialise ? "failed" : "succeeded");
+                    }
+                    if (initialise)
                     {
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
                         Initialise(); //this will start init config process
+                        Thread.Sleep(500);
+                        if (!IsReady) Thread.Sleep(1000);
                     }
                 }
                 catch (Exception e)
@@ -940,17 +954,21 @@ namespace Chetch.Arduino2
                 try
                 {
                     Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TIMEOUT);
-                    if(!IsReady || !BoardInitialised || !BoardConfigured || !Synchronise())
+                    bool disconnect = false;
+                    if(!IsReady || !BoardInitialised || !BoardConfigured)
                     {
-                        if (!IsReady)
-                        {
-                            Disconnect();
-                            Connect(_connectTimeout);
-                        }
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
-                        Initialise(); //this will start init config process
+                        disconnect = true;
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is not in a ready state so disconnecting", ID);
+                    } else
+                    {
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is in a ready state so attempting to synchronise...", ID);
+                        disconnect = !Synchronise();
+                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, disconnect ? "failed" : "succeeded");
                     }
-                    
+                    if (disconnect)
+                    {
+                        Disconnect();
+                    }
                 } catch (Exception e)
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
