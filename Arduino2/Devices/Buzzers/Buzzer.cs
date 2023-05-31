@@ -11,9 +11,10 @@ namespace Chetch.Arduino2.Devices.Buzzers
 
         public int DefaultSilenceDuration { get; set; } = 3000; //in millis
 
-        private bool silenced = true;
+        private int silencedFor = 0;
+        private DateTime silencedOn;
 
-        public bool IsSilenced => silenced;
+        public bool IsSilenced => (silencedFor > 0 && (DateTime.Now - silencedOn).TotalMilliseconds <= silencedFor);
 
         public Buzzer(String id, byte pin, int silenceDuration = 0) : base(id, SwitchMode.ACTIVE, pin)
         {
@@ -21,47 +22,36 @@ namespace Chetch.Arduino2.Devices.Buzzers
             AddCommand(ArduinoCommand.DeviceCommand.SILENCE);
         }
 
-        protected override void ExecuteCommand(ArduinoCommand cmd, ADMRequestManager.ADMRequest request, List<object> parameters = null)
+        public override ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<object> parameters = null)
         {
-            if(cmd.Command == ArduinoCommand.DeviceCommand.SILENCE)
+            if (cmd.Command == ArduinoCommand.DeviceCommand.SILENCE)
             {
-                if (IsOff)
+                if (IsOn && silencedFor > 0)
                 {
-                    return;
-                } else
-                {
-                    int duration = parameters != null && parameters.Count == 1 ? (int)parameters[0] : DefaultSilenceDuration;
-                    if (duration > 0)
-                    {
-                        TurnOff(duration);
-                        silenced = true;
-                    }
+                    TurnOff(silencedFor);
                 }
-            } 
+                return null;
+            }
             else
             {
-                base.ExecuteCommand(cmd, request, parameters);
+                return base.ExecuteCommand(cmd, parameters);
             }
         }
 
         public void Silence(int duration = 0)
         {
-            ExecuteCommand(ArduinoCommand.DeviceCommand.SILENCE, duration);
+            silencedOn = DateTime.Now;
+            silencedFor = duration <= 0 ? DefaultSilenceDuration : duration;
+            ExecuteCommand(ArduinoCommand.DeviceCommand.SILENCE);
         }
 
         public void Unsilence()
         {
-            if (silenced)
+            if (IsSilenced)
             {
+                silencedFor = 0;
                 TurnOn();
             }
-        }
-
-        public override void SetPosition(SwitchPosition newPosition, int duration = 0)
-        {
-            base.SetPosition(newPosition, duration);
-            
-            silenced = false;
         }
     }
 }
