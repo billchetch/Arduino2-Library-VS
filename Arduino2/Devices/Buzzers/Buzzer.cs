@@ -8,7 +8,6 @@ namespace Chetch.Arduino2.Devices.Buzzers
 {
     public class Buzzer : SwitchDevice
     {
-
         public int DefaultSilenceDuration { get; set; } = 3000; //in millis
 
         private int silencedFor = 0;
