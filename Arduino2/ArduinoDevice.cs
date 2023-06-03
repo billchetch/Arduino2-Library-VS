@@ -62,9 +62,9 @@ namespace Chetch.Arduino2
         public enum InterruptMode
         {
             NONE = 0,
-            CHANGE = 1,
-            FALLING = 2,
-            RISING = 3,
+            CHANGE = 1, //Trigger interrupt if either RISING or FALLING (see below)
+            FALLING = 2, //Trigger an interrupt when the pin transits from HIGH to LOW. 
+            RISING = 3, //Trigger an interrupt when the pin transits from LOW to HIGH.
         }
 
         public ArduinoDeviceManager ADM { get; set; }
