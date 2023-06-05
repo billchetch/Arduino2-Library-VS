@@ -224,7 +224,7 @@ namespace Chetch.Arduino2
                 foreach(var ao in aoToSerialize)
                 {
                     //Remove property change handler
-                    ao.PropertyChanged -= HandleADMPropertyChange;
+                    ao.PropertyChanged -= HandleAOPropertyChange;
 
                     //serialize if required
                     try
@@ -283,8 +283,10 @@ namespace Chetch.Arduino2
             return true;
         }
 
+
+        
         //loggging events
-        protected void HandleADMPropertyChange(Object sender, PropertyChangedEventArgs eargs)
+        virtual protected void HandleAOPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
             //Get Event data
             DSOPropertyChangedEventArgs dsoArgs = (DSOPropertyChangedEventArgs)eargs;
@@ -408,7 +410,7 @@ namespace Chetch.Arduino2
                         if (_aos.Contains(ao)) continue;
 
                         //Add handler so we can respond to property changes
-                        ao.PropertyChanged += HandleADMPropertyChange;
+                        ao.PropertyChanged += HandleAOPropertyChange;
 
                         if (ServiceDB != null)
                         {
