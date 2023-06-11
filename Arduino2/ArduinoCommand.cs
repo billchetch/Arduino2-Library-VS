@@ -59,6 +59,7 @@ namespace Chetch.Arduino2
             DEACTIVATE,
             RESUME,
             ZERO,
+            ANALYSE,
         }
 
         public enum ParameterType

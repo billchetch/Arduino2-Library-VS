@@ -204,7 +204,19 @@ namespace Chetch.Arduino2
 
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
-        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
+        public int MessagesSemt { get; internal set; } = 0;
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
+        public int MessagesReceived { get; internal set; } = 0;
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
+        public ulong BytesSent => _sfc.BytesSent;
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
+        public ulong BytesReceived => _sfc.BytesReceived;
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
         public DateTime LastMessageReceivedOn { get; internal set; }
 
         private System.Timers.Timer _synchroniseTimer;
@@ -246,6 +258,11 @@ namespace Chetch.Arduino2
         [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
         public long BoardLoopDuration { get; internal set; } = 0;
 
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public long BoardBytesReceived { get; internal set; } = 0;
+
+        [ArduinoProperty(PropertyAttribute.DESCRIPTOR)]
+        public long BoardBytesSent { get; internal set; } = 0;
 
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
@@ -427,6 +444,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case (byte)StreamFlowController.Event.RECEIVE_BUFFER_FULL:
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Receive buffer full", ID);
                     //Console.WriteLine("REMOTE ESP EVENT: Receive buffer full argghghgh");
                     break;
 
@@ -481,6 +499,13 @@ namespace Chetch.Arduino2
             //log.Add(String.Format(" event byte: {0}", b));
         }
 
+
+        /// <summary>
+        /// This method takes stream data from the connected board and converts it in to a message and then routes it to 
+        /// the intended target.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void HandleStreamData(Object sender, StreamFlowController.DataBlockArgs e)
         {
             ADMMessage message = null;
@@ -493,6 +518,9 @@ namespace Chetch.Arduino2
                 f.Validate();
                 message = ADMMessage.Deserialize(f.Payload);
                 LastMessageReceivedOn = DateTime.Now;
+                MessagesReceived++;
+
+                Console.WriteLine("{0} Received message {1} for target {2}", UID, message.Type, message.Target);
 
                 //use tag to get current request and release it for future use
                 ProcessingRequest = Requests.Release(message.Tag);
@@ -568,6 +596,12 @@ namespace Chetch.Arduino2
             }
         }
 
+
+        /// <summary>
+        /// This is to handle mesages specifically for the ADM (devices and groups handle their messges seperately.
+        /// Message targetting is done in HandleStreamData...
+        /// </summary>
+        /// <param name="message"></param>
         public override void HandleMessage(ADMMessage message)
         {
             //Board
@@ -628,7 +662,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case MessageType.STATUS_RESPONSE:
-                    AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured", "BoardLoopDuration");
+                    AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured", "BoardLoopDuration", "BoardBytesReceived", "BoardBytesSent");
                     //Console.WriteLine(">>> Memory: {0}", BoardMemory);
                     if (IsDeviceReady)
                     {
@@ -644,6 +678,8 @@ namespace Chetch.Arduino2
                         }
                         else
                         {
+                            //we use a successful status response to mean that this ADM and the board is synchronised hence setting the flag to true
+                            //if a synchronising attempt  hadbeen initiated
                             if (Synchronising)
                             {
                                 Synchronised = true;
@@ -691,6 +727,10 @@ namespace Chetch.Arduino2
             return message;
         }
 
+        /// <summary>
+        /// All messages sent to the board should pass through this method (which means messages sent by devices and groups as well)
+        /// </summary>
+        /// <param name="message"></param>
         public void SendMessage(ADMMessage message)
         {
             if (!_sfc.IsReady && !Connecting)
@@ -706,7 +746,12 @@ namespace Chetch.Arduino2
             }
 
             messageFrame.Payload = payload;
+            
+            //this is the unique point at which the arduino messaging layer connects with the underlying Stream connection
             _sfc.Send(messageFrame.GetBytes());
+
+            //keep at trackof messages sent
+            MessagesSemt++;
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
@@ -729,6 +774,10 @@ namespace Chetch.Arduino2
                     return 4;
                 case "BoardLoopDuration":
                     return 5;
+                case "BoardBytesReceived":
+                    return 6;
+                case "BoardBytesSent":
+                    return 7;
                 case "ErrorCode":
                     return 0;
                 case "AttachMode":

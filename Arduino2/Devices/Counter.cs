@@ -21,16 +21,18 @@ namespace Chetch.Arduino2.Devices
         public uint Count
         {
             get { return Get<uint>(); }
-            internal set { Set(value, IsReady); }
+            internal set { Set(value, IsReady, ReportInterval > 0); }
         }
 
+        [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public double CountPerSecond
         {
             get { return Get<double>(); }
-            internal set { Set(value, IsReady); }
+            internal set { Set(value, IsReady, ReportInterval > 0); }
         }
 
-
+        public ulong TotalCount { get; internal set; } = 0;
+        
         public Counter(String id, byte pin, InterruptMode imode, String name = DEFAULT_NAME) : base(id, name)
         {
             Pin = pin;
@@ -68,17 +70,23 @@ namespace Chetch.Arduino2.Devices
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    uint count = GetMessageValue<uint>("Count", message);
+                    AssignMessageValues(message, "Count");
                     ulong duration = GetMessageValue<ulong>("Duration", message); //in micros
                     if(Tolerance > 0)
                     {
                         duration = (ulong)Math.Round((double)duration / (double)Tolerance) * Tolerance;
                     }
-
-                    //so we set standard rate here
-                    CountPerSecond = (1000000.0 / duration) * count;
+                    try
+                    {
+                        TotalCount += Count;
+                    } catch (Exception)
+                    {
+                        //overflow
+                    }
                     
-                    AssignMessageValues(message, "Count");
+                    //so we set standard rate here
+                    CountPerSecond = (1000000.0 / duration) * Count;
+                    
                     //Console.WriteLine("{0}: Count {1}, Duration {2}, CPS {3}", UID, Count, duration, CountPerSecond);
                     break;
             }

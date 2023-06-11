@@ -293,6 +293,13 @@ namespace Chetch.Arduino2
             ArduinoObject ao = ((ArduinoObject)sender);
             ArduinoObject.ArduinoPropertyAttribute propertyAttribute = (ArduinoObject.ArduinoPropertyAttribute)ao.GetPropertyAttribute(dsoArgs.PropertyName);
             
+            if(propertyAttribute == null)
+            {
+                //this can happen if an AO uses Set DSO method but doesn't declare an explicity ArduinoProperty
+                ///in which case there's little we can do with this in terms of logging so return
+                return;
+            }
+
             //First we deal with a state change (i.e. an Event)
             if ((propertyAttribute.IsState || propertyAttribute.IsError) && CanLogEvent(ao, dsoArgs.PropertyName))
             {
@@ -393,6 +400,11 @@ namespace Chetch.Arduino2
         //create ADMs here ...if all the required adms have been created return true otherwise return false or throw an exception
         abstract protected bool CreateADMs();
 
+        virtual protected void OnADMsReady()
+        {
+            //a hook .. this fires when all the adms created IsReady property will be true for the first time
+        }
+
         private void OnBeginADMsTimer(Object sender, EventArgs earg)
         {
             _beginADMsTimer.Stop();
@@ -432,8 +444,9 @@ namespace Chetch.Arduino2
                     return;
                 }
             }
-            
+
             //begin the adms that are ready to begin
+            int admsReadyCount = 0;
             foreach (var adm in _adms.Values)
             {
                 if (adm.State >= ArduinoDeviceManager.ADMState.BEGUN) continue;
@@ -450,6 +463,11 @@ namespace Chetch.Arduino2
                         adm.Begin(BEGIN_TIMEOUT);
                         admReadyToUse = true;
                         Tracing?.TraceEvent(TraceEventType.Information, 0, "ADM {0} is ready for use", adm.ID);
+                        admsReadyCount++;
+                        if(admsReadyCount == _adms.Count)
+                        {
+                            OnADMsReady();
+                        }
                     }
                     catch (Exception e)
                     {
