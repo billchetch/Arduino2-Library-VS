@@ -116,6 +116,16 @@ namespace Chetch.Arduino2
             }
         }
 
+        public int GetByteCount()
+        {
+            int byteCount = 4; //bytes for type, tag, target and sender
+            foreach (var b in Arguments)
+            {
+                byteCount += 1 + b.Length;
+            }
+            return byteCount;
+        }
+
         public byte[] Serialize()
         {
             List<byte> bytes = new List<byte>();

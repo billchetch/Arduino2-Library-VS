@@ -449,6 +449,7 @@ namespace Chetch.Arduino2
                     break;
 
                 case (byte)StreamFlowController.Event.MAX_DATABLOCK_SIZE_EXCEEDED:
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Datablock size exceeded", ID);
                     //Console.WriteLine("REMOTE ESP EVENT: Too much data in da block cock");
                     break;
 
@@ -520,7 +521,7 @@ namespace Chetch.Arduino2
                 LastMessageReceivedOn = DateTime.Now;
                 MessagesReceived++;
 
-                Console.WriteLine("{0} Received message {1} for target {2}", UID, message.Type, message.Target);
+                //Console.WriteLine("{0} Received message {1} for target {2}", UID, message.Type, message.Target);
 
                 //use tag to get current request and release it for future use
                 ProcessingRequest = Requests.Release(message.Tag);
