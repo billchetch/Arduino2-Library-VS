@@ -76,6 +76,9 @@ namespace Chetch.Arduino2.Devices.Diagnostics
         //duration in seconds
         public int TestDuration { get; internal set; } = -1;
 
+        private int _delayUpper = 0;
+        private int _delayLower = 0;
+
         public DateTime TestStartedOn { get; internal set; }
 
         private TestResults _results = new TestResults();
@@ -198,7 +201,20 @@ namespace Chetch.Arduino2.Devices.Diagnostics
         {
             while (IsTesting)
             {
-                RequestStatus();
+                var rnd = new System.Random();
+                try
+                {
+                    RequestStatus();
+
+                    if(_delayUpper > 0)
+                    {
+                        var delay = rnd.Next(_delayLower, _delayUpper);
+                        Thread.Sleep(delay);
+                    }
+                } catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
                 //Thread.Sleep(1000);
             }
 
@@ -259,9 +275,12 @@ namespace Chetch.Arduino2.Devices.Diagnostics
             }
         }
 
-        public void StartTest(int duration = -1) 
+        public void StartTest(int duration = -1, int delayUpper = 0, int delayLower = 0) 
         {
             StopTest();
+
+            _delayUpper = delayUpper;
+            _delayLower = delayLower;
 
             IsTesting = true;
             TestDuration = duration;

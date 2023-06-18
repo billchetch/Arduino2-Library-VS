@@ -433,32 +433,32 @@ namespace Chetch.Arduino2
             {
                 case (byte)StreamFlowController.Event.RESET:
                     //Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
-                    Tracing?.TraceEvent(TraceEventType.Information, 1000, "{0} REMOTE ESP EVENT: Reset", ID);
+                    Tracing?.TraceEvent(TraceEventType.Information, 1000, "{0} REMOTE EVENT: Reset", ID);
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     //sfc.SendCommand(StreamFlowController.Command.REQUEST_STATUS);
-                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Remote CTS timeout", ID);
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE EVENT: Remote CTS timeout", ID);
                     //log.Add("EVENT: Remote CTS timeout");
                     //sfc.SendCTS(true);
                     break;
 
                 case (byte)StreamFlowController.Event.RECEIVE_BUFFER_FULL:
-                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Receive buffer full", ID);
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE EVENT: Receive buffer full", ID);
                     //Console.WriteLine("REMOTE ESP EVENT: Receive buffer full argghghgh");
                     break;
 
                 case (byte)StreamFlowController.Event.MAX_DATABLOCK_SIZE_EXCEEDED:
-                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: Datablock size exceeded", ID);
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE EVENT: Datablock size exceeded", ID);
                     //Console.WriteLine("REMOTE ESP EVENT: Too much data in da block cock");
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_REQUEST_TIMEOUT:
-                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE ESP EVENT: The cts request has timed out", ID);
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} REMOTE EVENT: The cts request has timed out", ID);
                     break;
 
                 case (byte)StreamFlowController.Event.PING_RECEIVED:
-                    //Console.WriteLine("REMOTE ESP EVENT: Ping received! aka PONG");
+                    //Console.WriteLine("REMOTE EVENT: Ping received! aka PONG");
                     break;
 
 
@@ -494,6 +494,7 @@ namespace Chetch.Arduino2
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
                     //Console.WriteLine("LOCAL EVENT: {0} ... CTS Timeout event sent to remote", b);
                     //Console.WriteLine("Bytes received/sent {0}/{1}", _sfc.BytesReceived, _sfc.BytesSent);
+                    Tracing?.TraceEvent(TraceEventType.Warning, 1000, "{0} LOCAL EVENT: Local CTS timeout", ID);
                     break;
 
             }
