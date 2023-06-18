@@ -70,15 +70,7 @@ namespace Chetch.Arduino2
             DEVICE_CONFIGURED,
         }
 
-        public class MessageReceivedArgs : EventArgs
-        {
-            public ADMMessage Message { get; internal set; }
-
-            public MessageReceivedArgs(ADMMessage message)
-            {
-                Message = message;
-            }
-        }
+        
 
         public static ArduinoDeviceManager Create(String boardName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
         {
@@ -202,7 +194,6 @@ namespace Chetch.Arduino2
         
         public ADMRequestManager.ADMRequest ProcessingRequest { get; internal set; } = null;
 
-        public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         [ArduinoProperty(ArduinoPropertyAttribute.METADATA | PropertyAttribute.DESCRIPTOR)]
         public int MessagesSemt { get; internal set; } = 0;
@@ -267,7 +258,7 @@ namespace Chetch.Arduino2
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
             _sfc = sfc;
-            _sfc.CTSTimeout = 1000; //in ms
+            _sfc.CTSTimeout = 2000; //in ms
             _sfc.StreamError += HandleStreamError;
             _sfc.DataBlockReceived += HandleStreamData;
             _sfc.CommandByteReceived += HandleStreamCommandByteReceived;
@@ -589,12 +580,6 @@ namespace Chetch.Arduino2
             finally
             {
                 ProcessingRequest = null;
-            }
-
-            if (message != null && IsBoardReady && MessageReceived != null)
-            {
-                var args = new MessageReceivedArgs(message);
-                MessageReceived(this, args);
             }
         }
 

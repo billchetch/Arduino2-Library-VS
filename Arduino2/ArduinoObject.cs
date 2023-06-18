@@ -27,6 +27,18 @@ namespace Chetch.Arduino2
             {}
         }
 
+        public class MessageReceivedArgs : EventArgs
+        {
+            public ADMMessage Message { get; internal set; }
+
+            public MessageReceivedArgs(ADMMessage message)
+            {
+                Message = message;
+            }
+        }
+
+        public event EventHandler<MessageReceivedArgs> MessageReceived;
+
         public DateTime LastMessagedHandledOn { get; internal set; }
 
         public ADMMessage LastMessagedHandled { get; internal set; }
@@ -79,6 +91,11 @@ namespace Chetch.Arduino2
         {
             LastMessagedHandledOn = DateTime.Now;
             LastMessagedHandled = message;
+
+            if(message != null && MessageReceived != null)
+            {
+                MessageReceived(this, new MessageReceivedArgs(message));
+            }
         }
 
         protected void SetError(String error, String info = "N/A")
