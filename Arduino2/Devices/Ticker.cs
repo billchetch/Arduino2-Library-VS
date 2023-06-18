@@ -17,6 +17,7 @@ namespace Chetch.Arduino2.Devices
         private int _pinLowDuration;
 
 
+        public int TickCount { get; internal set; }
 
         public Ticker(String id, byte pin, int interval, int tickDuration = 0, String name = DEFAULT_NAME) : base(id, name)
         {
@@ -31,7 +32,17 @@ namespace Chetch.Arduino2.Devices
             _pinLowDuration = interval - _pinHighDuration;
         }
 
-        
+        override protected int GetArgumentIndex(String fieldName, ADMMessage message)
+        {
+            switch (fieldName)
+            {
+                case "TickCount":
+                    return 0;
+
+                default:
+                    return base.GetArgumentIndex(fieldName, message);
+            }
+        }
 
         protected override void AddConfig(ADMMessage message)
         {
@@ -47,6 +58,7 @@ namespace Chetch.Arduino2.Devices
             switch (message.Type)
             {
                 case MessageType.DATA:
+                    AssignMessageValues(message, "TickCount");
                     break;
             }
 

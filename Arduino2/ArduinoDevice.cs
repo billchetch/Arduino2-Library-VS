@@ -126,6 +126,8 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady, IsReady); }
         }
 
+        public event EventHandler<MessageReceivedArgs> DataReceived;
+
         private Dictionary<String, ArduinoCommand> _commands = new Dictionary<String, ArduinoCommand>();
 
         public List<ArduinoCommand> Commands => _commands.Values.ToList();
@@ -267,6 +269,14 @@ namespace Chetch.Arduino2
             //a hook
         }
 
+        virtual protected void OnData(ADMMessage message)
+        {
+            if (message != null && DataReceived != null)
+            {
+                DataReceived(this, new MessageReceivedArgs(message));
+            }
+        }
+
         override public void HandleMessage(ADMMessage message)
         {   
             switch (message.Type)
@@ -329,6 +339,10 @@ namespace Chetch.Arduino2
 
                 case MessageType.PING_RESPONSE:
                     LastPingResponseOn = DateTime.Now;
+                    break;
+
+                case MessageType.DATA:
+                    OnData(message);
                     break;
             }
 

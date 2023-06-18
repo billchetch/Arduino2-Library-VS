@@ -24,12 +24,20 @@ namespace Chetch.Arduino2.Devices
             internal set { Set(value, IsReady, ReportInterval > 0); }
         }
 
+        public uint CountDuration { get; internal set; } = 0;
+
+        public uint IntervalDuration { get; internal set; } = 0;
+
+        public double AverageInterval { get; internal set; } = 0;
+
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public double CountPerSecond
         {
             get { return Get<double>(); }
             internal set { Set(value, IsReady, ReportInterval > 0); }
         }
+
+        public double IntervalsPerSecond { get; internal set; } = 0;
 
         public ulong TotalCount { get; internal set; } = 0;
         
@@ -57,8 +65,11 @@ namespace Chetch.Arduino2.Devices
                 case "Count":
                     return 0;
 
-                case "Duration":
+                case "CountDuration": //this is the time (micros) between starting counting and ending counting 
                     return 1;
+
+                case "IntervalDuration": //this is the time (micros) between the first and last count
+                    return 2; 
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);
@@ -70,11 +81,10 @@ namespace Chetch.Arduino2.Devices
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    AssignMessageValues(message, "Count");
-                    ulong duration = GetMessageValue<ulong>("Duration", message); //in micros
+                    AssignMessageValues(message, "Count", "CountDuration", "IntervalDuration");
                     if(Tolerance > 0)
                     {
-                        duration = (ulong)Math.Round((double)duration / (double)Tolerance) * Tolerance;
+                        CountDuration = (uint)Math.Round((double)CountDuration / (double)Tolerance) * Tolerance;
                     }
                     try
                     {
@@ -85,8 +95,12 @@ namespace Chetch.Arduino2.Devices
                     }
                     
                     //so we set standard rate here
-                    CountPerSecond = (1000000.0 / duration) * Count;
-                    
+                    CountPerSecond = CountDuration == 0 ? 0 : (1000000.0 / (double)CountDuration) * Count;
+
+                    AverageInterval = Count > 0 ? (double)IntervalDuration / (double)(Count - 1): 0;
+
+                    IntervalsPerSecond = Count > 0 ? (1000000.0 / AverageInterval) : 0;
+
                     //Console.WriteLine("{0}: Count {1}, Duration {2}, CPS {3}", UID, Count, duration, CountPerSecond);
                     break;
             }
