@@ -69,7 +69,7 @@ namespace Chetch.Arduino2
                 }
             }
 
-            protected void AddArduinoObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
+            private void addArduinoObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
             {
                 List<System.Reflection.PropertyInfo> properties = ao.GetProperties(AO_ATTRIBUTE_FLAGS);
                 Dictionary<String, Object> vals = new Dictionary<string, Object>();
@@ -84,17 +84,33 @@ namespace Chetch.Arduino2
 
             public void AddADM(ArduinoDeviceManager adm)
             {
-                AddArduinoObject(ADM_FIELD_NAME_PREFIX, adm);
+                addArduinoObject(ADM_FIELD_NAME_PREFIX, adm);
             }
 
             public void AddDevice(ArduinoDevice device, bool changedPropertiesOnly = false)
             {
-                AddArduinoObject(DEVICE_FIELD_NAME_PREFIX, device, changedPropertiesOnly);
+                addArduinoObject(DEVICE_FIELD_NAME_PREFIX, device, changedPropertiesOnly);
             }
 
             public void AddDeviceGroup(ArduinoDeviceGroup deviceGroup, bool changedPropertiesOnly = false)
             {
-                AddArduinoObject(DEVICE_GROUP_FIELD_NAME_PREFIX, deviceGroup, changedPropertiesOnly);
+                addArduinoObject(DEVICE_GROUP_FIELD_NAME_PREFIX, deviceGroup, changedPropertiesOnly);
+            }
+
+            public void AddAO(ArduinoObject ao)
+            {
+                if (ao is ArduinoDevice)
+                {
+                    AddDevice((ArduinoDevice)ao);
+                }
+                else if (ao is ArduinoDeviceGroup)
+                {
+                    AddDeviceGroup((ArduinoDeviceGroup)ao);
+                }
+                else if (ao is ArduinoDeviceManager)
+                {
+                    AddADM((ArduinoDeviceManager)ao);
+                }
             }
         }
 
@@ -334,19 +350,9 @@ namespace Chetch.Arduino2
                 {
                     message.Target = adm.ProcessingRequest.Owner;
                 }
-                if (sender is ArduinoDevice)
-                {
-                    schema.AddDevice((ArduinoDevice)sender);
-                }
-                else if (sender is ArduinoDeviceGroup)
-                {
-                    schema.AddDeviceGroup((ArduinoDeviceGroup)sender);
-                }
-                else if (sender is ArduinoDeviceManager)
-                {
-                    schema.AddADM((ArduinoDeviceManager)sender);
-                }
 
+                schema.AddAO((ArduinoObject)sender);
+                
                 DispatchMessage(ao, message);
             }
         }
