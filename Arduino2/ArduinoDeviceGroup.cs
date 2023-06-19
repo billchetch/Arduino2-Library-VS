@@ -37,6 +37,11 @@ namespace Chetch.Arduino2
             return String.Format("{0} {1}, {2} devices", UID, Name, Devices.Count);
         }
 
+        protected String CreateDeviceID(String deviceID)
+        {
+            return String.Format("{0}-{1}", ID, deviceID.ToLower());
+        }
+
         public void AddDevice(ArduinoDevice dev)
         {
             if (dev == null) return;

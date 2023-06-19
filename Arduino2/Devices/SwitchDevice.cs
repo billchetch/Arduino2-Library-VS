@@ -66,7 +66,7 @@ namespace Chetch.Arduino2.Devices
 
         public byte Pin { get; internal set; }
 
-        public int Tolerance { get; internal set; } = 0;
+        public int Tolerance { get; set; } = 0;
 
         public event EventHandler<SwitchPosition> Switched;
 
