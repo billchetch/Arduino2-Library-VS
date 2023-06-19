@@ -280,11 +280,9 @@ namespace Chetch.Arduino2
 
         virtual protected bool CanDispatch(ArduinoObject ao, String propertyName)
         {
-            return true;
+            return false;
         }
 
-
-        
         //loggging events
         virtual protected void HandleAOPropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
