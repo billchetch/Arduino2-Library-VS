@@ -932,11 +932,17 @@ namespace Chetch.Arduino2
         {
             if (AttachMode != AttachmentMode.OBSERVER_OBSERVED)
             {
+                Tracing?.TraceEvent(TraceEventType.Information, 2000, "Ending {0} calling finalise on ADM and devices...", ID);
                 try
                 {
-                    var message = CreateMessage(MessageType.RESET);
+                    var message = CreateMessage(MessageType.FINALISE);
                     SendMessage(message);
                     wait(100);
+                    foreach(var dev in _devices.Values)
+                    {
+                        dev.Finalise();
+                    }
+                    wait(250);
                 }
                 catch (Exception e)
                 {

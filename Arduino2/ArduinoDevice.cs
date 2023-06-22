@@ -234,6 +234,19 @@ namespace Chetch.Arduino2
             //a hook
         }
 
+
+        virtual protected void AddFinalisation(ADMMessage message)
+        {
+            //a hook
+        }
+
+        public void Finalise()
+        {
+            var message = CreateMessage(MessageType.FINALISE);
+            AddFinalisation(message);
+            SendMessage(message);
+        }
+
         virtual public ADMRequestManager.ADMRequest RequestStatus(String requester = null)
         {
             var message = CreateMessage(MessageType.STATUS_REQUEST);
