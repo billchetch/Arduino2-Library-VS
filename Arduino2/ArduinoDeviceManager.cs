@@ -424,7 +424,7 @@ namespace Chetch.Arduino2
             {
                 case (byte)StreamFlowController.Event.RESET:
                     //Console.WriteLine("<<<<< REMOTE ESP EVENT: Reset");
-                    Tracing?.TraceEvent(TraceEventType.Information, 1000, "{0} REMOTE EVENT: Reset", ID);
+                    //Tracing?.TraceEvent(TraceEventType.Information, 1000, "{0} REMOTE EVENT: Reset", ID);
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
@@ -479,7 +479,7 @@ namespace Chetch.Arduino2
             switch (b)
             {
                 case (byte)StreamFlowController.Event.RESET:
-                    //Console.WriteLine(">>>> LOCAL EVENT: {0} ... sending RESET to remote", b);
+                    //Console.WriteLine(">>>> LOCAL EVENT: {0} ... sending RESET event to remote", b);
                     break;
 
                 case (byte)StreamFlowController.Event.CTS_TIMEOUT:
@@ -509,6 +509,7 @@ namespace Chetch.Arduino2
                 //get the message from stream data
                 f.Add(e.DataBlock);
                 f.Validate();
+                
                 message = ADMMessage.Deserialize(f.Payload);
                 LastMessageReceivedOn = DateTime.Now;
                 MessagesReceived++;
@@ -651,6 +652,7 @@ namespace Chetch.Arduino2
                 case MessageType.STATUS_RESPONSE:
                     AssignMessageValues(message, "BoardMillis", "BoardMemory", "BoardInitialised", "BoardConfigured", "BoardLoopDuration", "BoardBytesReceived", "BoardBytesSent");
                     //Console.WriteLine(">>> Memory: {0}", BoardMemory);
+                    
                     if (IsDeviceReady)
                     {
                         int n = GetMessageValue<int>("DeviceCount", message);
@@ -932,17 +934,18 @@ namespace Chetch.Arduino2
         {
             if (AttachMode != AttachmentMode.OBSERVER_OBSERVED)
             {
-                Tracing?.TraceEvent(TraceEventType.Information, 2000, "Ending {0} calling finalise on ADM and devices...", ID);
+                Tracing?.TraceEvent(TraceEventType.Information, 2000, "Ending {0} calling finalise on devices then ADM ...", ID);
                 try
                 {
-                    var message = CreateMessage(MessageType.FINALISE);
-                    SendMessage(message);
-                    wait(100);
                     foreach(var dev in _devices.Values)
                     {
                         dev.Finalise();
                     }
                     wait(250);
+
+                    var message = CreateMessage(MessageType.FINALISE);
+                    SendMessage(message);
+                    wait(100);
                 }
                 catch (Exception e)
                 {

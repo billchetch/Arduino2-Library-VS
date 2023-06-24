@@ -201,6 +201,8 @@ namespace Chetch.Arduino2.Devices.Diagnostics
         {
             while (IsTesting)
             {
+                if (!IsReady) continue;
+
                 var rnd = new System.Random();
                 try
                 {
@@ -318,7 +320,7 @@ namespace Chetch.Arduino2.Devices.Diagnostics
 
         public void StopTest()
         {
-            Console.WriteLine("Stopping test...");
+            //Console.WriteLine("Stopping test...");
             IsTesting = false;
 
             if (_runTestThread != null)
