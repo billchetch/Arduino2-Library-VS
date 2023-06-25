@@ -144,7 +144,7 @@ namespace Chetch.Arduino2
         
         private bool _synchronising = false;
         private bool _synchronised = false;
-
+        
         public bool Synchronising
         {
             get { return _synchronising; }
@@ -746,7 +746,10 @@ namespace Chetch.Arduino2
             {
                 //any exception is deemed catastrohic atm requiring a connection reset
                 Tracing?.TraceEvent(TraceEventType.Error, 2188, "Exception {0} in ArduinoDeviceManager::SendMessage: {1}", e.GetType().ToString(), e.Message);
-                Disconnect(); //this will be picked up sync timer
+                Task.Delay(100).ContinueWith((_) =>
+                {
+                    Disconnect(); //this will be picked up sync timer
+                });
 
                 //throw the exception again
                 throw e;
@@ -949,7 +952,13 @@ namespace Chetch.Arduino2
                 {
                     foreach(var dev in _devices.Values)
                     {
-                        dev.Finalise();
+                        try
+                        {
+                            dev.Finalise();
+                        } catch (Exception e)
+                        {
+                            throw e;
+                        }
                     }
                     wait(250);
 
@@ -973,6 +982,8 @@ namespace Chetch.Arduino2
                 _synchroniseTimer.Stop();
             }
             Disconnect();
+
+            State = ADMState.CREATED;
         }
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
@@ -1008,7 +1019,8 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
-            } else if(LastMessageReceivedOn != default(DateTime) && (DateTime.Now - LastMessageReceivedOn).TotalMilliseconds > InactivityTimeout)
+            } 
+            else if(LastMessageReceivedOn != default(DateTime) && (DateTime.Now - LastMessageReceivedOn).TotalMilliseconds > InactivityTimeout)
             {
                 try
                 {

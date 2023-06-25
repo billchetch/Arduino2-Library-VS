@@ -193,8 +193,6 @@ namespace Chetch.Arduino2
         {
             if (ServiceDB != null)
             {
-                
-
                 if(_logSnapshotTimer == null)
                 {
                     _logSnapshotTimer = new System.Timers.Timer(LogSnapshotTimerInterval);
@@ -216,11 +214,15 @@ namespace Chetch.Arduino2
             if(_beginADMsTimer != null)
             {
                 _beginADMsTimer.Stop();
+                _beginADMsTimer = null;
             }
+            _admsCreated = false;
+            _adms.Clear();
 
             if (_logSnapshotTimer != null)
             {
                 _logSnapshotTimer.Stop();
+                _logSnapshotTimer = null;
             }
 
             lock (_dispatchMessageLock)
@@ -261,6 +263,8 @@ namespace Chetch.Arduino2
             }
 
             base.OnStop();
+
+            ServiceIsStopping = false;
         }
 
         virtual protected bool CanLogToSnapshot(ArduinoObject ao, String propertyName)
@@ -383,7 +387,7 @@ namespace Chetch.Arduino2
 
         public override void HandleClientError(Connection cnn, Exception e)
         {
-            throw new NotImplementedException();
+            //TODO: something here   
         }
 
         protected override void OnClientConnect(ClientConnection cnn)
@@ -397,7 +401,6 @@ namespace Chetch.Arduino2
                 _beginADMsTimer.Interval = BEGIN_ADMS_TIMER_INTERVAL;
                 Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so starting up timer to create and begin ADMs", cnn.Name);
                 OnBeginADMsTimer(null, null);
-
             }
         }
 
@@ -419,6 +422,7 @@ namespace Chetch.Arduino2
                 try
                 {
                     _admsCreated = CreateADMs();
+                    _aos.Clear();
 
                     List<ArduinoObject> aoToInitialise = GetArduinoObjects();
                     foreach (var ao in aoToInitialise)
