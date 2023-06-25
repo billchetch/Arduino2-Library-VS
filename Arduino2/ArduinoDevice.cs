@@ -103,7 +103,7 @@ namespace Chetch.Arduino2
             set { Set(value, IsReady); }
         }
 
-        public bool IsReady => State == DeviceState.CONFIGURED;
+        public bool IsReady => ADM != null && ADM.IsBoardReady && State == DeviceState.CONFIGURED;
 
         [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
         public DateTime LastStatusResponseOn

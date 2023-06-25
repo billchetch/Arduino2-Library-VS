@@ -345,17 +345,20 @@ namespace Chetch.Arduino2
                 //we now wait for the stream flow controller to synchronise stream reset
                 while (!_sfc.IsReady)
                 {
-                    //Console.WriteLine("Waiting for remote to reset...");
                     wait(500, started, timeout, "Connecting timed out waiting for stream to become ready");
                 }
 
                 //by here the stream is open and reset and ready for use
                 Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Stream is ready!", ID);
-
-                Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} connected", ID);
             }
             catch (Exception e)
             {
+                if (_sfc.IsOpen)
+                {
+                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} closing stream...", ID);
+                    _sfc.Close();
+                    Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} stream closed", ID);
+                }
                 throw e;
             }
             finally
@@ -369,10 +372,6 @@ namespace Chetch.Arduino2
             if (Connecting) throw new Exception("ADM is in the process of connecting");
             Disconnecting = true;
             Tracing?.TraceEvent(TraceEventType.Verbose, 0, "ADM {0} Disconnecting...", ID);
-            if (_synchroniseTimer != null)
-            {
-                _synchroniseTimer.Stop();
-            }
             
             if (_sfc.IsOpen)
             {
@@ -663,7 +662,7 @@ namespace Chetch.Arduino2
                                 Synchronising = false;
                                 Synchronised = false;
                             }
-                            throw new Exception(String.Format("Status response reurned {0} devices but local has {1} devices", n, _devices.Count));
+                            throw new Exception(String.Format("Status response returned {0} devices but local has {1} devices", n, _devices.Count));
                         }
                         else
                         {
@@ -735,12 +734,23 @@ namespace Chetch.Arduino2
             }
 
             messageFrame.Payload = payload;
-            
-            //this is the unique point at which the arduino messaging layer connects with the underlying Stream connection
-            _sfc.Send(messageFrame.GetBytes());
 
-            //keep at trackof messages sent
-            MessagesSemt++;
+            try
+            {
+                //this is the unique point at which the arduino messaging layer connects with the underlying Stream connection
+                _sfc.Send(messageFrame.GetBytes());
+
+                //keep at trackof messages sent
+                MessagesSemt++;
+            } catch (Exception e)
+            {
+                //any exception is deemed catastrohic atm requiring a connection reset
+                Tracing?.TraceEvent(TraceEventType.Error, 2188, "Exception {0} in ArduinoDeviceManager::SendMessage: {1}", e.GetType().ToString(), e.Message);
+                Disconnect(); //this will be picked up sync timer
+
+                //throw the exception again
+                throw e;
+            }
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
@@ -951,12 +961,16 @@ namespace Chetch.Arduino2
                 {
                     Tracing?.TraceEvent(TraceEventType.Error, 2000, "{0} ", ID, e.Message);
                 }
-            }
+            } //end if certain attachment mode
 
             while (Connecting || Synchronising)
             {
                 Tracing?.TraceEvent(TraceEventType.Information, 2000, "{0} Call to end but currently busy (connecting = {1}, synchronising = {2}) so waiting", ID, Connecting, Synchronising);
                 wait(1000);
+            }
+            if (_synchroniseTimer != null)
+            {
+                _synchroniseTimer.Stop();
             }
             Disconnect();
         }

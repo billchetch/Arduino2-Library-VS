@@ -216,8 +216,8 @@ namespace Chetch.Arduino2.Devices.Diagnostics
                 } catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
+                    Thread.Sleep(1000);
                 }
-                //Thread.Sleep(1000);
             }
 
             if(TestResultsUpdated != null)
