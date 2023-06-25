@@ -746,6 +746,8 @@ namespace Chetch.Arduino2
             {
                 //any exception is deemed catastrohic atm requiring a connection reset
                 Tracing?.TraceEvent(TraceEventType.Error, 2188, "Exception {0} in ArduinoDeviceManager::SendMessage: {1}", e.GetType().ToString(), e.Message);
+                
+                //we dissconnect with a task because this method could be called from the stream (_sfc) thread via DataBlocksReceived event handler
                 Task.Delay(100).ContinueWith((_) =>
                 {
                     Disconnect(); //this will be picked up sync timer
