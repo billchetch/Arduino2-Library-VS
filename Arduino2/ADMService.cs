@@ -216,8 +216,7 @@ namespace Chetch.Arduino2
                 _beginADMsTimer.Stop();
                 _beginADMsTimer = null;
             }
-            _admsCreated = false;
-            _adms.Clear();
+            
 
             if (_logSnapshotTimer != null)
             {
@@ -261,6 +260,10 @@ namespace Chetch.Arduino2
                     }
                 }
             }
+
+
+            _admsCreated = false;
+            _adms.Clear();
 
             base.OnStop();
 
