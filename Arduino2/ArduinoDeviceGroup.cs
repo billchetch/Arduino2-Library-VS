@@ -126,7 +126,10 @@ namespace Chetch.Arduino2
             //a hook for convenience
         }
 
-        abstract protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property);
+        virtual protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property)
+        {
+            //a stub for conveinience
+        }
         
         virtual public void ExecuteCommand(String commandAlias, String requester, List<Object> parameters = null)
         {

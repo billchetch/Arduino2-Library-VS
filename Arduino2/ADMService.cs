@@ -295,7 +295,7 @@ namespace Chetch.Arduino2
 
         virtual protected bool CanLogEvent(ArduinoObject ao, String eventName)
         {
-            return true;
+            return false;
         }
 
         virtual protected bool CanDispatch(ArduinoObject ao, String propertyName)
