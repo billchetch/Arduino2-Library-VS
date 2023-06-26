@@ -211,13 +211,13 @@ namespace Chetch.Arduino2
         protected override void OnStop()
         {
             ServiceIsStopping = true;
+
             if(_beginADMsTimer != null)
             {
                 _beginADMsTimer.Stop();
                 _beginADMsTimer = null;
             }
             
-
             if (_logSnapshotTimer != null)
             {
                 _logSnapshotTimer.Stop();
