@@ -97,9 +97,9 @@ namespace Chetch.Arduino2.Devices
                     //so we set standard rate here
                     CountPerSecond = CountDuration == 0 ? 0 : (1000000.0 / (double)CountDuration) * Count;
 
-                    AverageInterval = Count > 0 ? (double)IntervalDuration / (double)(Count - 1): 0;
+                    AverageInterval = Count > 1 ? (double)IntervalDuration / (double)(Count - 1) : 0;
 
-                    IntervalsPerSecond = Count > 0 ? (1000000.0 / AverageInterval) : 0;
+                    IntervalsPerSecond = AverageInterval > 0 ? (1000000.0 / AverageInterval) : 0;
 
                     //Console.WriteLine("{0}: Count {1}, Duration {2}, CPS {3}", UID, Count, duration, CountPerSecond);
                     break;

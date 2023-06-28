@@ -89,6 +89,7 @@
     <Compile Include="Devices\Infrared\IRTransmitter.cs" />
     <Compile Include="Devices\Motors\ServoController.cs" />
     <Compile Include="Devices\Diagnostics\TestDevice01.cs" />
+    <Compile Include="Devices\Temperature\TemperatureSensor.cs" />
     <Compile Include="Devices\Ticker.cs" />
     <Compile Include="Devices\SwitchDevice.cs" />
     <Compile Include="Devices\Temperature\DS18B20Array.cs" />

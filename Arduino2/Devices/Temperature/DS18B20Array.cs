@@ -35,18 +35,15 @@ namespace Chetch.Arduino2.Devices.Temperature
         public BitResolution Resolution { get; internal set; }
 
         public List<Sensor> Sensors = new List<Sensor>();
-        public bool TemperaturesUpdated
-        {
-            get { return Get<bool>(); }
-            internal set { Set(value, IsReady, IsReady); } //trigger by assignment even
-        }
+
+        public event EventHandler<List<Sensor>> TemperaturesUpdated;
 
         public DS18B20Array(String id, byte pin, BitResolution resolution, String name = DEFAULT_NAME) : base(id, name)
         {
             Pin = pin;
             Resolution = resolution;
 
-            Category = DeviceCategory.COUNTER;
+            Category = DeviceCategory.TEMPERATURE_SENSOR;
         }
 
         public void AddSensor(String id)
@@ -109,7 +106,7 @@ namespace Chetch.Arduino2.Devices.Temperature
                         //Console.WriteLine("T: {0}", temp);
                         Sensors[i].Temperature = temp;
                     }
-                    TemperaturesUpdated = true;
+                    TemperaturesUpdated?.Invoke(this, Sensors);
                     break;
             }
 

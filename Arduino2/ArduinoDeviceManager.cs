@@ -258,7 +258,7 @@ namespace Chetch.Arduino2
         public ArduinoDeviceManager(StreamFlowController sfc, int connectTimeout)
         {
             _sfc = sfc;
-            _sfc.CTSTimeout = 2000; //in ms
+            _sfc.CTSTimeout = 4000; //in ms
             _sfc.StreamError += HandleStreamError;
             _sfc.DataBlockReceived += HandleStreamData;
             _sfc.CommandByteReceived += HandleStreamCommandByteReceived;
@@ -569,6 +569,10 @@ namespace Chetch.Arduino2
                                         break;
                                 }
                             }
+                            break;
+
+                        case MessageType.ERROR:
+                            Tracing?.TraceEvent(TraceEventType.Error, 15001, "Device {0} Error: {1} with info: {2}", dev.UID, dev.Error, dev.ErrorInfo);
                             break;
                     }
                 } //end target switch

@@ -16,6 +16,8 @@ namespace Chetch.Arduino2
         public enum ErrorCode
         {
             INVALID_COMMAND = 1,
+            FAILED_TO_INITIALISE = 2,
+            FAILED_TO_CONFIGURE = 3,
         }
 
         public enum DeviceCategory
