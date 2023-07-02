@@ -17,6 +17,8 @@ namespace Chetch.Arduino2.Devices
 
         public uint Tolerance { get; set; } = 0;
 
+        public bool PinStateToCount { get; set; }
+
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public uint Count
         {
@@ -41,10 +43,25 @@ namespace Chetch.Arduino2.Devices
 
         public ulong TotalCount { get; internal set; } = 0;
         
-        public Counter(String id, byte pin, InterruptMode imode, String name = DEFAULT_NAME) : base(id, name)
+        public Counter(String id, byte pin, InterruptMode imode, int pinStateToCount = -1, String name = DEFAULT_NAME) : base(id, name)
         {
             Pin = pin;
             IMode = imode;
+
+            if (pinStateToCount == -1) {
+                switch (IMode)
+                {
+                    case InterruptMode.FALLING:
+                        PinStateToCount = false; break;
+
+                    case InterruptMode.RISING:
+                        PinStateToCount = true; break;
+                }
+            } 
+            else 
+            {
+                PinStateToCount = pinStateToCount > 0;
+            }
 
             Category = DeviceCategory.COUNTER;
         }
@@ -56,6 +73,8 @@ namespace Chetch.Arduino2.Devices
             message.AddArgument(Pin);
             message.AddArgument((byte)IMode);
             message.AddArgument(Tolerance);
+            message.AddArgument(PinStateToCount);
+
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)

@@ -493,6 +493,37 @@ namespace Chetch.Arduino2
 
 
         /// <summary>
+        /// Used to update the ADM device state based on the state of all the devices e.g when all are INITIALISED then the ADM Device state is DEVICE_INITIALISED
+        /// </summary>
+        /// <param name="devState"></param>
+        private void updateADMDeviceState(ArduinoDevice.DeviceState devState)
+        {
+            foreach (var d in _devices.Values)
+            {
+                if (d.State != devState)
+                {
+                    return;
+                }
+            }
+
+            //here all devices are of the same state
+            switch (devState)
+            {
+                case ArduinoDevice.DeviceState.INITIALISED:
+                    State = ADMState.DEVICE_INITIALISED;
+                    break;
+
+                case ArduinoDevice.DeviceState.CONFIGURING:
+                    State = ADMState.DEVICE_CONFIGURING;
+                    break;
+
+                case ArduinoDevice.DeviceState.CONFIGURED:
+                    State = ADMState.DEVICE_CONFIGURED;
+                    break;
+            }
+        }
+
+        /// <summary>
         /// This method takes stream data from the connected board and converts it in to a message and then routes it to 
         /// the intended target.
         /// </summary>
@@ -544,31 +575,17 @@ namespace Chetch.Arduino2
                     switch (message.Type)
                     {
                         case MessageType.INITIALISE_RESPONSE:
+                            Tracing?.TraceEvent(TraceEventType.Verbose, 125003, "Device {0} initialised", dev.UID);
+                            updateADMDeviceState(dev.State);
+                            break;
+                        
                         case MessageType.CONFIGURE_RESPONSE:
+                            Tracing?.TraceEvent(TraceEventType.Verbose, 125003, "Device {0} configured", dev.UID);
+                            updateADMDeviceState(dev.State);
+                            break;
+
                         case MessageType.STATUS_RESPONSE: //if attachmode is observer
-                            ArduinoDevice.DeviceState devState = dev.State;
-                            bool allOfSameState = true;
-                            foreach (var d in _devices.Values)
-                            {
-                                if (d.State != devState) allOfSameState = false;
-                            }
-                            if (allOfSameState)
-                            {
-                                switch (devState)
-                                {
-                                    case ArduinoDevice.DeviceState.INITIALISED:
-                                        State = ADMState.DEVICE_INITIALISED;
-                                        break;
-
-                                    case ArduinoDevice.DeviceState.CONFIGURING:
-                                        State = ADMState.DEVICE_CONFIGURING;
-                                        break;
-
-                                    case ArduinoDevice.DeviceState.CONFIGURED:
-                                        State = ADMState.DEVICE_CONFIGURED;
-                                        break;
-                                }
-                            }
+                            updateADMDeviceState(dev.State);
                             break;
 
                         case MessageType.ERROR:

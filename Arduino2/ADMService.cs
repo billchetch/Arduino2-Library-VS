@@ -401,9 +401,9 @@ namespace Chetch.Arduino2
             {
                 _beginADMsTimer = new System.Timers.Timer();
                 _beginADMsTimer.Elapsed += OnBeginADMsTimer;
-                _beginADMsTimer.Interval = BEGIN_ADMS_TIMER_INTERVAL;
+                _beginADMsTimer.Interval = 1000; //so we don't wait long ... the event handler will then set it properly
                 Tracing?.TraceEvent(TraceEventType.Information, 0, "Client {0} has connected so starting up timer to create and begin ADMs", cnn.Name);
-                OnBeginADMsTimer(null, null);
+                _beginADMsTimer.Start();
             }
         }
 
@@ -494,6 +494,8 @@ namespace Chetch.Arduino2
                 } while (!admReadyToUse);
             }
 
+            //ensure we using the correct timer interval as first timer event is only 1 sec after creation
+            _beginADMsTimer.Interval = BEGIN_ADMS_TIMER_INTERVAL;
             if (!ServiceIsStopping)
             {
                 _beginADMsTimer.Start();
