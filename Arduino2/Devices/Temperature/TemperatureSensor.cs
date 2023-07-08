@@ -10,7 +10,7 @@ namespace Chetch.Arduino2.Devices.Temperature
     {
         public event EventHandler<float> TemperatureUpdated;
 
-        public float Temperature => Sensors[0].Temperature;
+        public float Temperature => Sensors.Count == 1 ? Sensors[0].Temperature : -1;
 
         public TemperatureSensor(String id, byte pin, BitResolution resolution) : base(id, pin, resolution)
         {}
