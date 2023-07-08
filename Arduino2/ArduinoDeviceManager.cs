@@ -72,11 +72,16 @@ namespace Chetch.Arduino2
 
         
 
-        public static ArduinoDeviceManager Create(String boardName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT)
+        public static ArduinoDeviceManager Create(String boardName, int baudRate, int localUartSize, int remoteUartSize, int connectTimeout = DEFAULT_CONNECT_TIMEOUT, bool useGenericUSBDeviceAsFallback = true)
         {
             try
             {
                 var ports = SerialPorts.Find(boardName);
+                if(ports.Count == 0 && useGenericUSBDeviceAsFallback)
+                {
+                    ports = SerialPorts.Find(ArduinoSerialConnection.USB_SERIAL_DEVICE);
+                }
+
                 if(ports.Count == 0)
                 {
                     throw new Exception(String.Format("Cannot find a Serial Port for board {0}", boardName));
