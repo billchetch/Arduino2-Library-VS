@@ -599,6 +599,10 @@ namespace Chetch.Arduino2
                     }
                 } //end target switch
             }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                Tracing?.TraceEvent(TraceEventType.Error, 500, "ADM {0} Error due to invocation exception: {1}", ID, ex.InnerException.Message);
+            }
             catch (Exception ex)
             {
                 Tracing?.TraceEvent(TraceEventType.Error, 500, "ADM {0} Error: {1}", ID, ex.Message);
