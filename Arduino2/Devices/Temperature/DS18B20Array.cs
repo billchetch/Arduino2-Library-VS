@@ -11,6 +11,13 @@ namespace Chetch.Arduino2.Devices.Temperature
     {
         public const String DEFAULT_NAME = "DS18B20";
 
+        public enum ErrorTemps
+        {
+            NO_SENSOR = -127,
+            BAD_READING = 85,
+
+        } 
+
         public enum BitResolution
         {
             HIGH = 12, // 0.0625°C

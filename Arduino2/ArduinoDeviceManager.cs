@@ -21,7 +21,7 @@ namespace Chetch.Arduino2
         public const int DEFAULT_CONNECT_TIMEOUT = 5000;
         public const int DEFAULT_SYNCHRONISE_TIMEOUT = 3000;
         public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
-        public const int DEFAULT_INACTIVITY_TIMEOUT = 30000;
+        public const int DEFAULT_INACTIVITY_TIMEOUT = 10000;
 
         public enum ErrorCode
         {
