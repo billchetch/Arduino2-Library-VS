@@ -10,7 +10,23 @@ namespace Chetch.Arduino2
 
     public class ADMServiceDB : DB
     {
-        
+        //Logging stuff
+        public struct EventLogEntry
+        {
+            public String Name;
+            public String Source;
+            public String Info;
+            public Object Data;
+        }
+
+        public struct SnapshotLogEntry
+        {
+            public String Source;
+            public String StateName;
+            public Object State;
+            public String Description;
+        }
+
         public const String EVENT_LOG_TABLE = "adm_event_log";
         public const String SNAPSHOT_LOG_TABLE = "adm_snapshot_log";
 
@@ -50,6 +66,11 @@ namespace Chetch.Arduino2
             base.Initialize();
         }
 
+        public long LogEvent(EventLogEntry entry)
+        {
+            return LogEvent(entry.Name, entry.Source, entry.Data, entry.Info);
+        }
+
         public long LogEvent(String eventName, String source, Object data, String info = null)
         {
             var newRow = new DBRow();
@@ -77,6 +98,11 @@ namespace Chetch.Arduino2
             long limitId = pe == null ? -1 : pe.ID;
             DBRow ce = GetFirstEvent(currentEventName, source, limitId);
             return ce;
+        }
+
+        public long LogSnapshot(SnapshotLogEntry entry)
+        {
+            return LogSnapshot(entry.Source, entry.StateName, entry.State, entry.Description);
         }
 
         public long LogSnapshot(String stateSource, String stateName, Object state, String description = null)

@@ -126,6 +126,8 @@ namespace Chetch.Arduino2
         private System.Timers.Timer _beginADMsTimer;
         private bool _admsCreated = false;
         private Dictionary<String, ArduinoDeviceManager> _adms  = new Dictionary<String, ArduinoDeviceManager>();
+        public List<ArduinoDeviceManager> ADMs => _adms.Values.ToList();
+
         private List<ArduinoObject> _aos = new List<ArduinoObject>(); //list of arduino objects created, serialized and event handler attached
         
         private System.Timers.Timer _logSnapshotTimer;
@@ -301,6 +303,26 @@ namespace Chetch.Arduino2
             return false;
         }
 
+        virtual protected ADMServiceDB.EventLogEntry GetEventLogEntry(ArduinoObject ao, DSOPropertyChangedEventArgs dsoArgs)
+        {
+            var entry = new ADMServiceDB.EventLogEntry();
+            ArduinoObject.ArduinoPropertyAttribute propertyAttribute = (ArduinoObject.ArduinoPropertyAttribute)ao.GetPropertyAttribute(dsoArgs.PropertyName);
+
+            entry.Name = dsoArgs.PropertyName;
+            entry.Source = ao.UID;
+
+            if (propertyAttribute.IsError)
+            {
+                entry.Info = ao.ErrorInfo;
+            }
+            else
+            {
+                entry.Info = String.Format("{0} changed from {1} to {2}", entry.Name, dsoArgs.OldValue, dsoArgs.NewValue);
+            }
+            entry.Data = dsoArgs.NewValue;
+            return entry;
+        }
+
         virtual protected bool CanDispatch(ArduinoObject ao, String propertyName)
         {
             return false;
@@ -324,22 +346,10 @@ namespace Chetch.Arduino2
             //First we deal with a state change (i.e. an Event)
             if ((propertyAttribute.IsState || propertyAttribute.IsError) && CanLogEvent(ao, dsoArgs.PropertyName))
             {
-                String eventName = dsoArgs.PropertyName;
-                String eventInfo;
-                if (propertyAttribute.IsError)
-                {
-                    eventInfo = ao.ErrorInfo; 
-                } else
-                {
-                    eventInfo = String.Format("{0} changed from {1} to {2}", eventName, dsoArgs.OldValue, dsoArgs.NewValue);
-                }
-                Object eventData = dsoArgs.NewValue;
-                String eventSource = ao.UID;
-
-                //log the event to the db
                 try
                 {
-                    ServiceDB.LogEvent(eventName, eventSource, eventData, eventInfo);
+                    ADMServiceDB.EventLogEntry entry = GetEventLogEntry(ao, dsoArgs);
+                    ServiceDB.LogEvent(entry);
                 }
                 catch (Exception e)
                 {
@@ -413,6 +423,7 @@ namespace Chetch.Arduino2
         virtual protected void OnADMsReady()
         {
             //a hook .. this fires when all the adms created IsReady property will be true for the first time
+            ServiceDB?.LogEvent("ADMs Ready", ServiceName, null, String.Format("All {0} adms are ready to use", ADMs.Count));
         }
 
         private void OnBeginADMsTimer(Object sender, EventArgs earg)

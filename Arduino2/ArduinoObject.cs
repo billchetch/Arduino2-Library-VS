@@ -37,6 +37,8 @@ namespace Chetch.Arduino2
             }
         }
 
+        
+
         public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         public DateTime LastMessagedHandledOn { get; internal set; }
