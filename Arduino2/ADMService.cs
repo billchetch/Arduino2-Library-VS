@@ -272,9 +272,15 @@ namespace Chetch.Arduino2
             ServiceIsStopping = false;
         }
 
-        virtual protected bool CanLogToSnapshot(ArduinoObject ao, String propertyName)
+        virtual protected bool CanLogToSnapshot(ArduinoObject ao)
         {
             return true;
+        }
+
+
+        virtual protected List<ADMServiceDB.SnapshotLogEntry> GetSnapshotLogEntries(ArduinoObject ao)
+        {
+            return null;
         }
 
         virtual protected void OnLogSnapshotTimer(Object sender, EventArgs earg)
@@ -286,16 +292,16 @@ namespace Chetch.Arduino2
                 List<ArduinoObject> aoToSnapshot = GetArduinoObjects();
                 foreach (var ao in aoToSnapshot)
                 {
-                    /*var properties = ao.GetPropertyNames(ArduinoObject.ArduinoPropertyAttribute.DATA);
-                    foreach(var p in properties)
+                    if (CanLogToSnapshot(ao))
                     {
-                        if(CanLogToSnapshot(ao, p))
+                        var entries = GetSnapshotLogEntries(ao);
+                        if (entries != null && entries.Count > 0)
                         {
-                            ServiceDB.LogSnapshot(ao.UID, p, ao.Get<Object>(p));
+                            ServiceDB.LogSnapshot(entries);
                         }
-                    }*/
-                }
-            }
+                    }
+                } //end loop through aos of this adm
+            } //end loop through adms
         }
 
         virtual protected bool CanLogEvent(ArduinoObject ao, String eventName)

@@ -17,6 +17,14 @@ namespace Chetch.Arduino2
             public String Source;
             public String Info;
             public Object Data;
+
+            public EventLogEntry(String name, String source, Object data, String info)
+            {
+                Name = name;
+                Source = source;
+                Data = data;
+                Info = info;
+            }
         }
 
         public struct SnapshotLogEntry
@@ -25,6 +33,14 @@ namespace Chetch.Arduino2
             public String StateName;
             public Object State;
             public String Description;
+
+            public SnapshotLogEntry(String source, String stateName, Object state, String description = null)
+            {
+                Source = source;
+                StateName = stateName;
+                State = state;
+                Description = description;
+            }
         }
 
         public const String EVENT_LOG_TABLE = "adm_event_log";
@@ -115,6 +131,17 @@ namespace Chetch.Arduino2
             return Insert(SNAPSHOT_LOG_TABLE, newRow);
         }
 
+
+        public long[] LogSnapshot(List<SnapshotLogEntry> entries)
+        {
+            var ids = new long[entries.Count];
+            int idx = 0;
+            foreach(var entry in entries)
+            {
+                ids[idx++] = LogSnapshot(entry);
+            }
+            return ids;
+        }
          
     } //end class
 } //end namespace
