@@ -423,8 +423,8 @@ namespace Chetch.Arduino2
             }
         }
 
-        //create ADMs here ...if all the required adms have been created return true otherwise return false or throw an exception
-        abstract protected bool CreateADMs();
+        //create ADMs here ...
+        abstract protected void CreateADMs();
 
         virtual protected void OnADMsReady()
         {
@@ -441,7 +441,8 @@ namespace Chetch.Arduino2
             {
                 try
                 {
-                    _admsCreated = CreateADMs();
+                    CreateADMs();
+                    _admsCreated = true;
                     _aos.Clear();
 
                     List<ArduinoObject> aoToInitialise = GetArduinoObjects();
