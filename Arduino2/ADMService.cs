@@ -19,9 +19,9 @@ namespace Chetch.Arduino2
     {
         public class MessageSchema : Chetch.Messaging.MessageSchema
         {
-            public const String ADM_FIELD_NAME_PREFIX = "ADM";
-            public const String DEVICE_FIELD_NAME_PREFIX = "Device";
-            public const String DEVICE_GROUP_FIELD_NAME_PREFIX = "DeviceGroup";
+            public const String AO_PREFIX = "AO";
+            public const String TYPE_FIELD_NAME = "Type";
+            
 
             public const String COMMAND_STATUS = "status";
             public const String COMMAND_PING = "ping";
@@ -69,49 +69,19 @@ namespace Chetch.Arduino2
                 }
             }
 
-            private void addArduinoObject(String prefix, ArduinoObject ao, bool changedPropertiesOnly = false)
+            public void AddArduinoObject(ArduinoObject ao, bool changedPropertiesOnly = false)
             {
                 List<System.Reflection.PropertyInfo> properties = ao.GetProperties(AO_ATTRIBUTE_FLAGS);
                 Dictionary<String, Object> vals = new Dictionary<string, Object>();
+                vals[TYPE_FIELD_NAME] = ao.GetType().Name;
                 foreach (var p in properties)
                 {
                     if (changedPropertiesOnly && !ao.ChangedProperties.Contains(p.Name)) continue;
                     vals[p.Name] = p.GetValue(ao);
                 }
 
-                AddValues(vals, prefix);
-            }
-
-            public void AddADM(ArduinoDeviceManager adm)
-            {
-                addArduinoObject(ADM_FIELD_NAME_PREFIX, adm);
-            }
-
-            public void AddDevice(ArduinoDevice device, bool changedPropertiesOnly = false)
-            {
-                addArduinoObject(DEVICE_FIELD_NAME_PREFIX, device, changedPropertiesOnly);
-            }
-
-            public void AddDeviceGroup(ArduinoDeviceGroup deviceGroup, bool changedPropertiesOnly = false)
-            {
-                addArduinoObject(DEVICE_GROUP_FIELD_NAME_PREFIX, deviceGroup, changedPropertiesOnly);
-            }
-
-            public void AddAO(ArduinoObject ao)
-            {
-                if (ao is ArduinoDevice)
-                {
-                    AddDevice((ArduinoDevice)ao);
-                }
-                else if (ao is ArduinoDeviceGroup)
-                {
-                    AddDeviceGroup((ArduinoDeviceGroup)ao);
-                }
-                else if (ao is ArduinoDeviceManager)
-                {
-                    AddADM((ArduinoDeviceManager)ao);
-                }
-            }
+                AddValues(vals, AO_PREFIX);
+            }            
         }
 
         protected const int BEGIN_ADMS_TIMER_INTERVAL = 30 * 1000;
@@ -374,7 +344,7 @@ namespace Chetch.Arduino2
                     message.Target = adm.ProcessingRequest.Owner;
                 }
 
-                schema.AddAO((ArduinoObject)sender);
+                schema.AddArduinoObject((ArduinoObject)sender);
                 
                 DispatchMessage(ao, message);
             }
@@ -396,7 +366,13 @@ namespace Chetch.Arduino2
                     foreach(var msg in _messagesToDispatch.Values)
                     {
                         //this will send to all subscribers and if the message has a target will send to that target as well
-                        Broadcast(msg);
+                        try
+                        {
+                            Broadcast(msg);
+                        } catch
+                        {
+                            //fail quietly
+                        }
                     }
 
                     _messagesToDispatch.Clear();
