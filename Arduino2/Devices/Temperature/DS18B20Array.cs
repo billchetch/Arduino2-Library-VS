@@ -11,8 +11,9 @@ namespace Chetch.Arduino2.Devices.Temperature
     {
         public const String DEFAULT_NAME = "DS18B20";
 
-        public enum ErrorTemps
+        public enum SensorState
         {
+            OK = 0,
             NO_SENSOR = -127,
             BAD_READING = 85,
 
@@ -29,7 +30,28 @@ namespace Chetch.Arduino2.Devices.Temperature
         public class Sensor
         {
             public String ID;
-            public float Temperature { get;  internal set; } = 0.0f;
+
+            private float _temperature = 0.0f;
+            public float Temperature 
+            {
+                get { return _temperature; }
+                internal set 
+                {
+                    _temperature = value;
+                    switch ((int)_temperature)
+                    {
+                        case (int)SensorState.NO_SENSOR:
+                            State = SensorState.NO_SENSOR; break;
+
+                        case (int)SensorState.BAD_READING:
+                            State = SensorState.BAD_READING; break;
+
+                        default:
+                            State = SensorState.OK; break;
+                    }
+                } 
+            }
+            public SensorState State { get; internal set; } = SensorState.OK;
 
             public Sensor(String id)
             {
