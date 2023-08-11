@@ -248,9 +248,9 @@ namespace Chetch.Arduino2
         }
 
 
-        virtual protected List<ADMServiceDB.SnapshotLogEntry> GetSnapshotLogEntries(ArduinoObject ao)
+        virtual protected void AddSnapshotLogEntries(ArduinoObject ao, List<ADMServiceDB.SnapshotLogEntry> entries)
         {
-            return null;
+            //a hook
         }
 
         virtual protected void OnLogSnapshotTimer(Object sender, EventArgs earg)
@@ -264,7 +264,8 @@ namespace Chetch.Arduino2
                 {
                     if (CanLogToSnapshot(ao))
                     {
-                        var entries = GetSnapshotLogEntries(ao);
+                        List<ADMServiceDB.SnapshotLogEntry> entries = new List<ADMServiceDB.SnapshotLogEntry>();
+                        AddSnapshotLogEntries(ao, entries);
                         if (entries != null && entries.Count > 0)
                         {
                             ServiceDB.LogSnapshot(entries);
