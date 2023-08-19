@@ -647,7 +647,7 @@ namespace Chetch.Arduino2
                     }
 
                     State = ADMState.INITIALISED;
-                    Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}, Attachmetn mode {3}, AREF {4}", ID, BoardName, BoardMaxDevices, AttachMode, AREF);
+                    Tracing?.TraceEvent(TraceEventType.Information, 100, "ADM {0} initialised board {1} with max devices {2}, Attachment mode {3}, AREF {4}", ID, BoardName, BoardMaxDevices, AttachMode, AREF);
                     if (_devices.Count > BoardMaxDevices)
                     {
                         throw new Exception(String.Format("{0} ADM has {1} devices but board {2} only supports {3} devices", ID, _devices.Count, BoardName, BoardMaxDevices));
@@ -972,7 +972,7 @@ namespace Chetch.Arduino2
                 _synchroniseTimer.Elapsed += OnSynchroniseTimer;
             }
             _synchroniseTimer.Start();
-            Tracing?.TraceEvent(TraceEventType.Information, 0, "Staring sync timer with interval of {0}ms", DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
+            Tracing?.TraceEvent(TraceEventType.Information, 0, "Starting sync timer with interval of {0}ms", DEFAULT_SYNCHRONISE_TIMER_INTERVAL);
         }
 
         public void End(int timeout = -1)
@@ -1025,23 +1025,23 @@ namespace Chetch.Arduino2
             _synchroniseTimer.Stop();
             if (!IsConnected)
             {
-                Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Is not connected so attempting to reconnect ...", ID);
+                Tracing?.TraceEvent(TraceEventType.Information, 501, "OnSynchroniseTimer: ADM {0} Is not connected so attempting to reconnect ...", ID);
                 try
                 {
                     Disconnect(); //to ensure cleanly disconnected before trying to connect again
                     Connect(_connectTimeout);
-                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Connected!", ID);
+                    Tracing?.TraceEvent(TraceEventType.Information, 502, "OnSynchroniseTimer: ADM {0} Connected!", ID);
                     bool initialise = !IsReady;
                     if (IsReady)
                     {
                         //board and devices already configured from previous effort so attempt to synchronise
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is in Ready state so attempting to Synchronise...!", ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 503, "OnSynchroniseTimer: ADM {0} is in Ready state so attempting to Synchronise...!", ID);
                         initialise = !Synchronise();
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, initialise ? "failed" : "succeeded");
+                        Tracing?.TraceEvent(TraceEventType.Information, 504, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, initialise ? "failed" : "succeeded");
                     }
                     if (initialise)
                     {
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 505, "OnSynchroniseTimer: ADM {0} Initialising...", ID);
                         Initialise(); //this will start init config process
                         Thread.Sleep(500);
                         if (!IsReady) Thread.Sleep(1000);
@@ -1049,24 +1049,24 @@ namespace Chetch.Arduino2
                 }
                 catch (Exception e)
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
+                    Tracing?.TraceEvent(TraceEventType.Error, 500, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
             } 
             else if(LastMessageReceivedOn != default(DateTime) && (DateTime.Now - LastMessageReceivedOn).TotalMilliseconds > InactivityTimeout)
             {
                 try
                 {
-                    Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TIMEOUT);
+                    Tracing?.TraceEvent(TraceEventType.Information, 511, "OnSynchroniseTimer: ADM {0} inactive for more than {1} ms", ID, DEFAULT_INACTIVITY_TIMEOUT);
                     bool disconnect = false;
                     if(!IsReady || !BoardInitialised || !BoardConfigured)
                     {
                         disconnect = true;
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is not in a ready state so disconnecting", ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 512, "OnSynchroniseTimer: ADM {0} is not in a ready state so disconnecting", ID);
                     } else
                     {
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} is in a ready state so attempting to synchronise...", ID);
+                        Tracing?.TraceEvent(TraceEventType.Information, 513, "OnSynchroniseTimer: ADM {0} is in a ready state so attempting to synchronise...", ID);
                         disconnect = !Synchronise();
-                        Tracing?.TraceEvent(TraceEventType.Information, 0, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, disconnect ? "failed" : "succeeded");
+                        Tracing?.TraceEvent(TraceEventType.Information, 514, "OnSynchroniseTimer: ADM {0} Synchronising {1}!", ID, disconnect ? "failed" : "succeeded");
                     }
                     if (disconnect)
                     {
@@ -1074,7 +1074,7 @@ namespace Chetch.Arduino2
                     }
                 } catch (Exception e)
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
+                    Tracing?.TraceEvent(TraceEventType.Error, 500, "OnSynchroniseTimer: ADM {0} Error: {1}", ID, e.Message);
                 }
             }
             _synchroniseTimer.Start();
@@ -1124,9 +1124,10 @@ namespace Chetch.Arduino2
                 {
                     wait(100, started, timeout, "Timed out while synchronising");
                 }
-            } catch (TimeoutException)
+            } catch (TimeoutException e)
             {
                 Synchronised = false;
+                SetError(String.Format("Timeout Exception: {0}"), e.Message);
             }
             Synchronising = false;
             return Synchronised;

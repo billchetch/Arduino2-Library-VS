@@ -255,24 +255,19 @@ namespace Chetch.Arduino2
 
         virtual protected void OnLogSnapshotTimer(Object sender, EventArgs earg)
         {
-            foreach (var adm in _adms.Values)
+            List<ArduinoObject> aoToSnapshot = GetArduinoObjects();
+            foreach (var ao in aoToSnapshot)
             {
-                if (!adm.IsReady) continue;
-
-                List<ArduinoObject> aoToSnapshot = GetArduinoObjects();
-                foreach (var ao in aoToSnapshot)
+                if (CanLogToSnapshot(ao))
                 {
-                    if (CanLogToSnapshot(ao))
+                    List<ADMServiceDB.SnapshotLogEntry> entries = new List<ADMServiceDB.SnapshotLogEntry>();
+                    AddSnapshotLogEntries(ao, entries);
+                    if (entries != null && entries.Count > 0)
                     {
-                        List<ADMServiceDB.SnapshotLogEntry> entries = new List<ADMServiceDB.SnapshotLogEntry>();
-                        AddSnapshotLogEntries(ao, entries);
-                        if (entries != null && entries.Count > 0)
-                        {
-                            ServiceDB.LogSnapshot(entries);
-                        }
+                        ServiceDB.LogSnapshot(entries);
                     }
-                } //end loop through aos of this adm
-            } //end loop through adms
+                }
+            }
         }
 
         virtual protected bool CanLogEvent(ArduinoObject ao, String eventName)
