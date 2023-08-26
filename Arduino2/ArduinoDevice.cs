@@ -457,6 +457,7 @@ namespace Chetch.Arduino2
         /// All public commands should go throw this public command
         /// </summary>
         private Task _executeCommandTask = null;
+        private Object _executeCommandLock = new object();
         virtual public ADMRequestManager.ADMRequest ExecuteCommand(ArduinoCommand cmd, List<Object> parameters = null)
         {
             if (!IsReady)
@@ -479,28 +480,34 @@ namespace Chetch.Arduino2
                         DateTime started = DateTime.Now;
                         while (!req.Proceed || ((DateTime.Now.Ticks - started.Ticks) / TimeSpan.TicksPerMillisecond) < 100) ;
                     }
-                    if(req.Owner == null)
+                    lock (_executeCommandLock)
                     {
-                        ADM.Requests.Release(req);
-                        req = null;
+                        if (req.Owner == null)
+                        {
+                            ADM.Requests.Release(req);
+                            req = null;
+                        }
+                        ExecuteCommand(cmd, req, parameters);
                     }
-                    ExecuteCommand(cmd, req, parameters);
                 } catch  (Exception e)
                 {
                     Error = e.Message;
                 }
             };
-            
-            if (_executeCommandTask == null || _executeCommandTask.IsCompleted)
+
+            lock (_executeCommandLock)
             {
-                _executeCommandTask = new Task(action);
-                _executeCommandTask.Start();
+                if (_executeCommandTask == null || _executeCommandTask.IsCompleted)
+                {
+                    _executeCommandTask = new Task(action);
+                    _executeCommandTask.Start();
+                }
+                else
+                {
+                    _executeCommandTask = _executeCommandTask.ContinueWith(antecedent => action());
+                }
+                return req;
             }
-            else
-            {
-                _executeCommandTask = _executeCommandTask.ContinueWith(antecedent => action());
-            }
-            return req;
         }
 
         public ADMRequestManager.ADMRequest ExecuteCommand(String commandAlias, List<Object> parameters = null)

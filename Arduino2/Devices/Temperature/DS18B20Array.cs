@@ -109,6 +109,7 @@ namespace Chetch.Arduino2.Devices.Temperature
                     AddSensor("s" + (i + 1));
                 }
             }
+            Console.WriteLine("------> Temp sensors: {0}", sensorCount);
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
@@ -116,7 +117,7 @@ namespace Chetch.Arduino2.Devices.Temperature
             switch (fieldName)
             {
                 case "SensorCount":
-                    return 0;
+                    return 2;
 
                 default:
                     return base.GetArgumentIndex(fieldName, message);

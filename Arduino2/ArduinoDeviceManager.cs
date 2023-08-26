@@ -1020,7 +1020,7 @@ namespace Chetch.Arduino2
 
         protected void OnSynchroniseTimer(Object sender, EventArgs eargs)
         {
-            if (Connecting || Synchronising || Disconnecting) return;
+            if (Connecting || Disconnecting) return;
 
             _synchroniseTimer.Stop();
             if (!IsConnected)
@@ -1116,18 +1116,18 @@ namespace Chetch.Arduino2
             
             //Console.WriteLine("Started synchronising...");
             Synchronising = true;
-            RequestStatus();
-            DateTime started = DateTime.Now;
             try
             {
+                RequestStatus();
+                DateTime started = DateTime.Now;
                 while (Synchronising)
                 {
                     wait(100, started, timeout, "Timed out while synchronising");
                 }
-            } catch (TimeoutException e)
+            } catch (Exception e)
             {
                 Synchronised = false;
-                SetError(String.Format("Timeout Exception: {0}"), e.Message);
+                SetError(String.Format("Synchronise Exception: {0}"), e.Message);
             }
             Synchronising = false;
             return Synchronised;

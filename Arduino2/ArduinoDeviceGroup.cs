@@ -21,8 +21,19 @@ namespace Chetch.Arduino2
 
         public List<ArduinoDevice> Devices { get; internal set; } = new List<ArduinoDevice>();
 
-        //use the Enable method to set this value
-        public bool Enabled { get; private set; } = false;
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, true)]
+        public bool Enabled
+        {
+            get { return Get<bool>(); }
+            internal set { Set(value); }
+        }
+
+        [ArduinoProperty(ArduinoPropertyAttribute.METADATA, PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN)]
+        public DateTime LastStatusResponseOn
+        {
+            get { return Get<DateTime>(); }
+            set { Set(value); }
+        }
 
         private Object _handlePropertyChangeLock = new Object();
 
@@ -75,26 +86,7 @@ namespace Chetch.Arduino2
             return null;
         }
 
-        virtual public void Enable(bool enable = true, bool setDevices = true, String requester = null)
-        {
-            Enabled = enable;
-            if (setDevices)
-            {
-                foreach (var dev in Devices)
-                {
-                    var req = dev.Enable(enable);
-                    req.Owner = requester;
-                }
-            }
-        }
-
-        virtual public void RequestStatus(String requester = null)
-        {
-            foreach (var dev in Devices)
-            {
-                dev.RequestStatus(requester);
-            }
-        }
+        
 
         protected void HandlePropertyChange(Object sender, PropertyChangedEventArgs eargs)
         {
@@ -128,11 +120,53 @@ namespace Chetch.Arduino2
 
         virtual protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property)
         {
-            //a stub for conveinience
+            switch (property.Name)
+            {
+                case "Enabled":
+                    Enabled = (bool)property.GetValue(device);
+                    break;
+
+                case "LastStatusResponseOn":
+                    LastStatusResponseOn = device.LastStatusResponseOn;
+                    break;
+            }
         }
-        
+
+        virtual public void Enable(bool enable = true, bool setDevices = true, String requester = null)
+        {
+            Enabled = enable;
+            if (setDevices)
+            {
+                foreach (var dev in Devices)
+                {
+                    var req = dev.Enable(enable);
+                    req.Owner = requester;
+                }
+            }
+        }
+
+        virtual public void RequestStatus(String requester = null)
+        {
+            foreach (var dev in Devices)
+            {
+                dev.RequestStatus(requester);
+            }
+        }
+
         virtual public void ExecuteCommand(String commandAlias, String requester, List<Object> parameters = null)
         {
+            switch (commandAlias.Trim().ToLower())
+            {
+                case "enable":
+                    bool enable = parameters != null && parameters.Count > 0 ? Chetch.Utilities.Convert.ToBoolean(parameters[0]) : true;
+                    Enable(enable);
+                    return;
+
+                case "status":
+                    RequestStatus();
+                    return;
+            }
+
             foreach(var dev in Devices)
             {
                 var req = dev.ExecuteCommand(commandAlias, parameters);

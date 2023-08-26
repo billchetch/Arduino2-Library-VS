@@ -40,27 +40,6 @@ namespace Chetch.Arduino2
 
             public MessageSchema(MessageType messageType) : base(messageType) { }
 
-            public void AddADMs(Dictionary<String, ArduinoDeviceManager> adms)
-            {
-                if (adms != null && adms.Count > 0)
-                {
-                    foreach (ArduinoDeviceManager adm in adms.Values)
-                    {
-                        Dictionary<String, Object> vals = new Dictionary<String, Object>();
-                        var properties = adm.GetProperties(AO_ATTRIBUTE_FLAGS);
-                        foreach (var p in properties)
-                        {
-                            vals[p.Name] = p.GetValue(adm);
-                        }
-                        Message.AddValue("ADM:" + adm.ID, vals);
-                    }
-                }
-                else
-                {
-                    Message.AddValue("ADMS", "No boards connected");
-                }
-            }
-
             protected void AddValues(Dictionary<String, Object> vals, String prefix = null)
             {
                 foreach(KeyValuePair<String, Object> kvp in vals){
@@ -264,7 +243,14 @@ namespace Chetch.Arduino2
                     AddSnapshotLogEntries(ao, entries);
                     if (entries != null && entries.Count > 0)
                     {
-                        ServiceDB.LogSnapshot(entries);
+                        try
+                        {
+                            ServiceDB.LogSnapshot(entries);
+                        }
+                        catch(Exception e)
+                        {
+                            Tracing?.TraceEvent(TraceEventType.Error, 803, "Logging snapshot to db caused exception: {0}", e.Message);
+                        }
                     }
                 }
             }
@@ -297,6 +283,12 @@ namespace Chetch.Arduino2
 
         virtual protected bool CanDispatch(ArduinoObject ao, String propertyName)
         {
+            switch (propertyName)
+            {
+                case "LastStatusResponseOn": //means that a status requet has been fulfilled
+                case "Enabled":
+                    return true;
+            }
             return false;
         }
 
@@ -325,7 +317,7 @@ namespace Chetch.Arduino2
                 }
                 catch (Exception e)
                 {
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, e.Message);
+                    Tracing?.TraceEvent(TraceEventType.Error, 802, e.Message);
                 }
             }
 
@@ -340,7 +332,7 @@ namespace Chetch.Arduino2
                     message.Target = adm.ProcessingRequest.Owner;
                 }
 
-                schema.AddArduinoObject((ArduinoObject)sender);
+                schema.AddArduinoObject(ao);
                 
                 DispatchMessage(ao, message);
             }
@@ -504,12 +496,28 @@ namespace Chetch.Arduino2
             return adm;
         }
 
-        protected ArduinoDeviceManager GetADM(String id)
+        protected ArduinoDeviceManager GetADM(String id, String aoid = null)
         {
             if (String.IsNullOrEmpty(id)) throw new ArgumentNullException("ADM ID cannot be null or empty");
-            if (_adms.Count == 1 && id.ToLower() == "adm")
+            if (id.ToLower() == "adm")
             {
-                return _adms.First().Value;
+                if (_adms.Count == 1)
+                {
+                    return _adms.First().Value;
+                } else if(aoid != null)
+                {
+                    foreach(var adm in _adms.Values)
+                    {
+                        ArduinoObject ao = adm.GetDevice(aoid);
+                        if (ao != null) return adm;
+                        ao = adm.GetDeviceGroup(aoid);
+                        if (ao != null) return adm;
+                    }
+                    return null;
+                } else
+                {
+                    return null;
+                }
             } else
             {
                 if (!_adms.ContainsKey(id)) throw new Exception(String.Format("Cannot find ADM with ID {0}", id));
@@ -536,11 +544,14 @@ namespace Chetch.Arduino2
         {
             bool respond = true;
             MessageSchema schema = new MessageSchema(response);
-
+            
             switch (command)
             {
                 case MessageSchema.COMMAND_STATUS:
-                    schema.AddADMs(_adms);
+                    foreach(var a in _adms.Values)
+                    {
+                        a.RequestStatus(message.Sender);
+                    }
                     break;
 
                 default:
@@ -552,7 +563,11 @@ namespace Chetch.Arduino2
                     }
 
                     //so this is an ADM command, find the board first
-                    adm = GetADM(tgtcmd[0].Trim());
+                    adm = GetADM(tgtcmd[0].Trim(), tgtcmd.Length == 3 ? tgtcmd[1].Trim() :  null);
+                    if(adm == null)
+                    {
+                        throw new Exception(String.Format("Cannot find adm for command {0}", command));
+                    }
                     if (!adm.IsConnected)
                     {
                         throw new Exception(String.Format("{0} is not conntected", adm.ID));
