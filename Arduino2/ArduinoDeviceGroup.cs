@@ -21,7 +21,7 @@ namespace Chetch.Arduino2
 
         public List<ArduinoDevice> Devices { get; internal set; } = new List<ArduinoDevice>();
 
-        [ArduinoProperty(ArduinoPropertyAttribute.STATE, true)]
+        [ArduinoProperty(ArduinoPropertyAttribute.STATE, false)]
         public bool Enabled
         {
             get { return Get<bool>(); }
@@ -116,6 +116,7 @@ namespace Chetch.Arduino2
         virtual protected void OnDeviceReady(ArduinoDevice device)
         {
             //a hook for convenience
+            Enabled = device.Enabled;
         }
 
         virtual protected void HandleDevicePropertyChange(ArduinoDevice device, System.Reflection.PropertyInfo property)
