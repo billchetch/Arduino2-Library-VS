@@ -442,7 +442,11 @@ namespace Chetch.Arduino2
             int admsReadyCount = 0;
             foreach (var adm in _adms.Values)
             {
-                if (adm.State >= ArduinoDeviceManager.ADMState.BEGUN) continue;
+                if (adm.State >= ArduinoDeviceManager.ADMState.BEGUN)
+                {
+                    admsReadyCount++;
+                    continue;
+                }
 
                 bool admReadyToUse = false;
                 int beginAttempts = 1;
