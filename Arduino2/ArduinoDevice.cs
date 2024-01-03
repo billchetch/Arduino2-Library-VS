@@ -13,7 +13,7 @@ namespace Chetch.Arduino2
     {
         public const int REPORT_INTERVAL_NONE = -1;
 
-        public enum ErrorCode
+        public enum DeviceErrorCode
         {
             INVALID_COMMAND = 1,
             FAILED_TO_INITIALISE = 2,
@@ -300,12 +300,13 @@ namespace Chetch.Arduino2
                     //TODO: run this through GetArgumentIndex and then use GetMessageValue ... include subcode as well
                     String error;
                     String info;
+                    int errorSubCode;
                     try
                     {
-                        ArduinoDeviceManager.ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
-                        ErrorCode deviceErrorCode = (ErrorCode)GetMessageValue<int>("DeviceErrorCode", message);
-                        int subCode = GetMessageValue<int>("DeviceErrorSubCode", message);
-                        error = String.Format("{0}-{1}-{2}", errorCode, deviceErrorCode, subCode);
+                        ArduinoDeviceManager.ADMErrorCode errorContextCode = (ArduinoDeviceManager.ADMErrorCode)GetMessageValue<int>("ErrorCode", message);
+                        DeviceErrorCode deviceErrorCode = (DeviceErrorCode)GetMessageValue<int>("DeviceErrorCode", message);
+                        errorSubCode = GetMessageValue<int>("DeviceErrorSubCode", message);
+                        error = "Device error";
                         if (message.Arguments.Count - 1 >= GetArgumentIndex("ErrorFromMessage", message))
                         {
                             info = "Originating message of type " + GetMessageValue<MessageType>("ErrorFromMessage", message);
@@ -314,13 +315,14 @@ namespace Chetch.Arduino2
                         {
                             info = "Originating message not supplied";
                         }
-                    } 
+                        SetError(error, info, (int)errorContextCode, (int)deviceErrorCode, errorSubCode); //This will trigger a property change event that can be listened to
+                    }
                     catch (Exception e)
                     {
                         error = "Unknown error";
                         info = e.Message;
+                        SetError(error, info);
                     }
-                    SetError(error, info); //This will trigger a property change event that can be listened to
                     break;
 
                 case MessageType.INITIALISE_RESPONSE:

@@ -23,7 +23,7 @@ namespace Chetch.Arduino2
         public const int DEFAULT_SYNCHRONISE_TIMER_INTERVAL = 1000;
         public const int DEFAULT_INACTIVITY_TIMEOUT = 10000;
 
-        public enum ErrorCode
+        public enum ADMErrorCode
         {
             NO_ERROR = 0,
             NO_ADM_INSTANCE = 1,
@@ -62,12 +62,16 @@ namespace Chetch.Arduino2
             BEGUN,
             INITIALISING,
             INITIALISED,
+            INITIALISE_FAILED,
             CONFIGURING,
             CONFIGURED,
+            CONFIGURE_FAILED,
             DEVICE_INITIALISING,
             DEVICE_INITIALISED,
+            DEVICE_INITIALISE_FAILED,
             DEVICE_CONFIGURING,
             DEVICE_CONFIGURED,
+            DEVICE_CONFIGURE_FAILED,
         }
 
         
@@ -595,6 +599,10 @@ namespace Chetch.Arduino2
 
                         case MessageType.ERROR:
                             Tracing?.TraceEvent(TraceEventType.Error, 15001, "Device {0} Error: {1} with info: {2}", dev.UID, dev.Error, dev.ErrorInfo);
+                            if(State == ADMState.DEVICE_CONFIGURING && dev.ErrorCode == (int)ArduinoDevice.DeviceErrorCode.FAILED_TO_CONFIGURE)
+                            {
+                                State = ADMState.DEVICE_CONFIGURE_FAILED;
+                            }
                             break;
                     }
                 } //end target switch
@@ -625,8 +633,8 @@ namespace Chetch.Arduino2
             switch (message.Type)
             {
                 case MessageType.ERROR:
-                    ErrorCode errorCode = (ArduinoDeviceManager.ErrorCode)GetMessageValue<int>("ErrorCode", message);
-                    SetError("ADMErrorCode: " + errorCode.ToString(), "N/A");
+                    ADMErrorCode errorCode = (ArduinoDeviceManager.ADMErrorCode)GetMessageValue<int>("ErrorCode", message);
+                    SetError("ADMErrorCode: " + errorCode.ToString(), "N/A", (int)errorCode);
                     Tracing?.TraceEvent(TraceEventType.Error, 1500, "ADM {0} Message Type Error, code: {1}", ID, errorCode);
                     //log.Add(String.Format("ERROR: {0}", message.ArgumentAsInt(0)));
                     //Console.WriteLine("---------------------------");

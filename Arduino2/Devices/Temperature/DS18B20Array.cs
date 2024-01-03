@@ -14,9 +14,9 @@ namespace Chetch.Arduino2.Devices.Temperature
         public enum SensorState
         {
             OK = 0,
-            NO_SENSOR = -127,
-            BAD_READING = 85,
-
+            NO_SENSOR = -127, //set by dallas
+            BAD_READING = 85, //set by dallas
+            SENSOR_FAULT = 1,
         } 
 
         public enum BitResolution
@@ -29,6 +29,8 @@ namespace Chetch.Arduino2.Devices.Temperature
 
         public class Sensor
         {
+            const int BAD_READING_THRESHOLD = 3;
+
             public String ID;
 
             private float _temperature = 0.0f;
@@ -44,14 +46,26 @@ namespace Chetch.Arduino2.Devices.Temperature
                             State = SensorState.NO_SENSOR; break;
 
                         case (int)SensorState.BAD_READING:
-                            State = SensorState.BAD_READING; break;
+                            _badReadingCount++;
+                            if (_badReadingCount > BAD_READING_THRESHOLD)
+                            {
+                                State = SensorState.SENSOR_FAULT;
+                            }
+                            else
+                            {
+                                State = SensorState.BAD_READING;
+                            }
+                            break;
 
                         default:
+                            _badReadingCount = 0;
                             State = SensorState.OK; break;
                     }
                 } 
             }
             public SensorState State { get; internal set; } = SensorState.OK;
+
+            private int _badReadingCount = 0;
 
             public Sensor(String id)
             {
@@ -109,7 +123,21 @@ namespace Chetch.Arduino2.Devices.Temperature
                     AddSensor("s" + (i + 1));
                 }
             }
-            Console.WriteLine("------> Temp sensors: {0}", sensorCount);
+            //Console.WriteLine("------> Temp sensors: {0}", sensorCount);
+        }
+
+        protected override void OnData(ADMMessage message)
+        {
+            base.OnData(message);
+
+            for (int i = 0; i < Sensors.Count; i++)
+            {
+                int idx = i;
+                float temp = message.GetArgument<float>(idx);
+                //Console.WriteLine("T: {0}", temp);
+                Sensors[i].Temperature = temp;
+            }
+            TemperaturesUpdated?.Invoke(this, Sensors);
         }
 
         override protected int GetArgumentIndex(String fieldName, ADMMessage message)
@@ -122,25 +150,6 @@ namespace Chetch.Arduino2.Devices.Temperature
                 default:
                     return base.GetArgumentIndex(fieldName, message);
             }
-        }
-
-        override public void HandleMessage(ADMMessage message)
-        {
-            switch (message.Type)
-            {
-                case MessageType.DATA:
-                    for(int i = 0; i < Sensors.Count; i++)
-                    {
-                        int idx = i;
-                        float temp = message.GetArgument<float>(idx);
-                        //Console.WriteLine("T: {0}", temp);
-                        Sensors[i].Temperature = temp;
-                    }
-                    TemperaturesUpdated?.Invoke(this, Sensors);
-                    break;
-            }
-
-            base.HandleMessage(message);
         }
     }
 }

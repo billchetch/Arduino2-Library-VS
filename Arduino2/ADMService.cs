@@ -325,13 +325,14 @@ namespace Chetch.Arduino2
             if ((propertyAttribute.IsState || propertyAttribute.IsData || propertyAttribute.IsMetaData || propertyAttribute.IsError) && CanDispatch(ao, dsoArgs.PropertyName))
             {
                 var message = new Message(propertyAttribute.IsError ? MessageType.ERROR : MessageType.DATA);
-                var schema = new MessageSchema(message);
+                
                 var adm = GetADMFromArduinoObject(ao);
                 if (adm.ProcessingRequest != null)
                 {
                     message.Target = adm.ProcessingRequest.Owner;
                 }
 
+                var schema = new MessageSchema(message);
                 schema.AddArduinoObject(ao);
                 
                 DispatchMessage(ao, message);
@@ -552,10 +553,52 @@ namespace Chetch.Arduino2
             switch (command)
             {
                 case MessageSchema.COMMAND_STATUS:
-                    foreach(var a in _adms.Values)
+                    bool ready = false;
+                    int statusCode = 0;
+                    String statusSummary = "";
+                    String statusDetail = "";
+                    String lf = "\n";
+
+                    if (_admsCreated)
                     {
-                        a.RequestStatus(message.Sender);
+                        ready = true;
+                        foreach (var a in _adms.Values)
+                        {
+                            if (!a.IsReady)
+                            {
+                                ready = false;
+                                statusCode = (int)a.State;
+                                statusSummary = String.Format("ADM {0} is of state {1}", a.UID, a.State);
+                                var devices = a.GetDevices();
+                                foreach(var dev in devices)
+                                {
+                                    if(dev.State != ArduinoDevice.DeviceState.CONFIGURED && !String.IsNullOrEmpty(dev.Error))
+                                    {
+                                        statusDetail += String.Format("Device {0} {1}-{2}-{3}-{4}", dev.UID, dev.Error, dev.ErrorContextCode, dev.ErrorCode, dev.ErrorSubCode);
+                                        statusDetail += lf;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                a.RequestStatus(message.Sender);
+                            }
+                        }
+                    } else
+                    {
+                        statusSummary = "Creating ADMs please wait";
                     }
+
+                    if (ready)
+                    {
+                        statusSummary = String.Format("All {0} adms are ready to use", _adms.Count);
+                    }
+                    
+                    response.AddValue("Ready", ready);
+                    response.AddValue("StatusCode", statusCode);
+                    response.AddValue("StatusSummary", statusSummary);
+                    response.AddValue("StatusDetail", statusDetail);
+                    response.SubType = ready ? 1 : 0;
                     break;
 
                 default:

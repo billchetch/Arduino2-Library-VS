@@ -59,6 +59,15 @@ namespace Chetch.Arduino2
             internal set { Set(value, true, true); }
         }
 
+        [ArduinoProperty(PropertyAttribute.ERROR)]
+        public int ErrorContextCode { get; internal set; }
+
+        [ArduinoProperty(PropertyAttribute.ERROR)]
+        public int ErrorCode { get; internal set; }
+
+        [ArduinoProperty(PropertyAttribute.ERROR)]
+        public int ErrorSubCode { get; internal set; }
+
         public String ErrorInfo { get; internal set; }
 
         abstract protected int GetArgumentIndex(String fieldName, ADMMessage message);
@@ -100,9 +109,14 @@ namespace Chetch.Arduino2
             }
         }
 
-        protected void SetError(String error, String info = "N/A")
+        protected void SetError(String error, String info = "N/A", int errorContextCode = 0, int errorCode = 0, int errorSubCode = 0)
         {
+            ErrorContextCode = errorContextCode;
+            ErrorCode = errorCode;
+            ErrorSubCode = errorSubCode;
             ErrorInfo = info;
+
+            //this will trigger a property changed event to listen to
             Error = error;
         }
     }
