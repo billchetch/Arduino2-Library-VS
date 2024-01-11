@@ -38,6 +38,8 @@ namespace Chetch.Arduino2.Devices.Weight
             protected set { Set(value, IsReady, IsReady); } //Note: this will fire a property change even if no value change
         }
 
+        public event EventHandler<double> WeightUpdated;
+
         public LoadCell(String id, byte doutPin, byte sckPin, String name = DEFAULT_NAME) : base(id, name)
         {
             _doutPin = doutPin;
@@ -75,7 +77,7 @@ namespace Chetch.Arduino2.Devices.Weight
 
         virtual protected void OnSetWeight()
         {
-            //a hook
+            WeightUpdated?.Invoke(this, Weight);
         }
 
         override public void HandleMessage(ADMMessage message)

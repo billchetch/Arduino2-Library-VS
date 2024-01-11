@@ -36,6 +36,7 @@ namespace Chetch.Arduino2.Devices.Weight
         }
 
 
+        public event EventHandler<double> LevelUpdated;
 
         public FluidLevel(String id, byte doutPin, byte sckPin, double pipeDiameter, double pipeWeight, double maxHeight, double fluidDensity = WATER_DENSITY) : base(id, doutPin, sckPin)
         {
@@ -86,6 +87,7 @@ namespace Chetch.Arduino2.Devices.Weight
                     }
                 }
             }
+            LevelUpdated?.Invoke(this, Level);
         }
 
         public override void Tare()
