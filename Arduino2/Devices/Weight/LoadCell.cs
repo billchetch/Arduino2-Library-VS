@@ -25,7 +25,7 @@ namespace Chetch.Arduino2.Devices.Weight
 
         public long Offset { get; set; } = 0;
 
-        public long RawValue { get; internal set; } = 0;
+        public Int32 RawValue { get; internal set; } = 0;
 
         public int MinWeight { get; set; } = 0;
 
@@ -85,7 +85,7 @@ namespace Chetch.Arduino2.Devices.Weight
             switch (message.Type)
             {
                 case MessageType.DATA:
-                    RawValue = GetMessageValue<long>("RawValue", message);
+                    RawValue = GetMessageValue<Int32>("RawValue", message);
 
                     double w = (RawValue - Offset) / Scale;
                     Weight = Math.Min(Math.Max(w, MinWeight), MaxWeight);
