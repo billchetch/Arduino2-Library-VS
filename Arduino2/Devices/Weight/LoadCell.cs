@@ -20,11 +20,15 @@ namespace Chetch.Arduino2.Devices.Weight
 
         public int SampleSize { get; set; } = 1; //how man samples to take before averaging the read value
 
-
+        [ArduinoProperty(PropertyAttribute.SERIALIZABLE)]
         public double Scale { get; set; } = 1.0;
 
-        public long Offset { get; set; } = 0;
+        [ArduinoProperty(PropertyAttribute.SERIALIZABLE)]
+        public Int32 Offset { get; set; } = 0;
 
+        public double ReferenceWeight { get; set; } = 1.0; //used for calibration
+
+        [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public Int32 RawValue { get; internal set; } = 0;
 
         public int MinWeight { get; set; } = 0;
@@ -99,6 +103,21 @@ namespace Chetch.Arduino2.Devices.Weight
         virtual public void Tare()
         {
             Offset = RawValue;
+        }
+
+        virtual public void Calibrate()
+        {
+            if(ReferenceWeight <= 0)
+            {
+                throw new Exception(string.Format("{0} cannot calibrate with reference weight {1}", UID, ReferenceWeight));
+            }
+
+            if(RawValue < Offset)
+            {
+                throw new Exception(string.Format("{0} cannot calibrate as scale will be negative", UID));
+            }
+
+            Scale = (RawValue - Offset) / ReferenceWeight;
         }
 
         /*protected override bool HandleCommandResponse(ArduinoCommand.DeviceCommand deviceCommand, ADMMessage message)

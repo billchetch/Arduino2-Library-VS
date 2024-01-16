@@ -11,7 +11,7 @@ namespace Chetch.Arduino2.Devices.Weight
         private FluidLevel _fluidLevel;
         private Button _tareButton;
         private Button _resetButton;
-        private long _originalOffset;
+        private Int32 _originalOffset;
 
         public FluidLevelDG(String id, FluidLevel fluidLevel, byte tarePin, byte resetPin, String name = "FLDG") : base(id, name)
         {

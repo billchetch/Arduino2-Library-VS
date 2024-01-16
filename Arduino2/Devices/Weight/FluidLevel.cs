@@ -92,7 +92,7 @@ namespace Chetch.Arduino2.Devices.Weight
 
         public override void Tare()
         {
-            Offset = RawValue - (long)(_pipeWeight * Scale);
+            Offset = RawValue - (Int32)(_pipeWeight * Scale);
         }
     }
 }
