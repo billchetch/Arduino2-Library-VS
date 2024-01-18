@@ -89,10 +89,5 @@ namespace Chetch.Arduino2.Devices.Weight
             }
             LevelUpdated?.Invoke(this, Level);
         }
-
-        public override void Tare()
-        {
-            Offset = RawValue - (Int32)(_pipeWeight * Scale);
-        }
     }
 }

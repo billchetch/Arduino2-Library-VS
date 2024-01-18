@@ -26,7 +26,7 @@ namespace Chetch.Arduino2.Devices.Weight
         [ArduinoProperty(PropertyAttribute.SERIALIZABLE)]
         public Int32 Offset { get; set; } = 0;
 
-        public double ReferenceWeight { get; set; } = 1.0; //used for calibration
+        public double ReferenceWeight { get; set; } = 100.0; //used for calibration
 
         [ArduinoProperty(ArduinoPropertyAttribute.DATA, 0)]
         public Int32 RawValue { get; internal set; } = 0;

@@ -434,7 +434,7 @@ namespace Chetch.Arduino2
                 catch (Exception e)
                 {
                     _beginADMsTimer.Start();
-                    Tracing?.TraceEvent(TraceEventType.Error, 0, "Exception: {0}", e.Message);
+                    Tracing?.TraceEvent(TraceEventType.Error, 1310, "Exception: {0}", e.Message);
                     return;
                 }
             }
