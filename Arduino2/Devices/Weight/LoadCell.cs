@@ -20,10 +20,8 @@ namespace Chetch.Arduino2.Devices.Weight
 
         public int SampleSize { get; set; } = 1; //how man samples to take before averaging the read value
 
-        [ArduinoProperty(PropertyAttribute.SERIALIZABLE)]
         public double Scale { get; set; } = 1.0;
 
-        [ArduinoProperty(PropertyAttribute.SERIALIZABLE)]
         public Int32 Offset { get; set; } = 0;
 
         public double ReferenceWeight { get; set; } = 100.0; //used for calibration
